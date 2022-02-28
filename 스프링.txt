@@ -1,3 +1,19 @@
+//HomeController.java
+package com.itbank.controller;
+
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.RequestMapping;
+
+@Controller
+public class HomeController {
+	
+	@RequestMapping("/")
+	public String home() {
+		return "home";
+	}
+}
+
+---------------
 //home.jsp
 <%@ page language="java" contentType="text/html; charset=UTF-8"
     pageEncoding="UTF-8"%>
@@ -217,11 +233,237 @@ public class Ex02Controller {
 </body>
 </html>
 ===========================================================================
+//home.jsp
+<%@ page language="java" contentType="text/html; charset=UTF-8"
+    pageEncoding="UTF-8"%>
+<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<c:set var="cpath">${pageContext.request.contextPath }</c:set>
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>day01</title>
+</head>
+<body>
 
+<h1>컨트롤러 예제</h1>
+<hr>
 
+<ul>
+	<li><a href="${pageContext.request.contextPath }/ex01">ex01 - 링크를 클릭하면 연결되는 함수</a></li>
+	<li><a href="${cpath }/ex02">ex02 - 컨트롤러에 주로 사용하는 어노테이션</a></li>
+	<li><a href="${cpath }/ex03">ex03 - 커맨드 객체</a></li>
+	<li><a href="${cpath }/ex04">ex04 - Model And View</a></li>
+	<li><a href="${cpath }/ex05">ex05 - Path Variable</a></li>
+	<li><a href="${cpath }/calc">calc - 두 수의 사칙연산 계산기</a></li>
+</ul>
 
+</body>
+</html>
+-----------------
+//ex03.jsp
+<%@ page language="java" contentType="text/html; charset=UTF-8"
+    pageEncoding="UTF-8"%>
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Insert title here</title>
+</head>
+<body>
 
+<h1>ex03 (GET)</h1>
+<hr>
+
+<form method="POST">
+	<input type="text" name="name" placeholder="이름을 입력하세요" required autofocus>
+	<input type="number" name="age" placeholder="나이를 입력하세요" required>
+	<input type="submit" value="제출">
+</form>
+
+</body>
+</html>
+---------------------
+//Ex03Controller.java
+package com.itbank.controller;
+
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PostMapping;
+
+import com.itbank.member.MemberDTO;
+
+@Controller
+public class Ex03Controller {
+
+	@GetMapping("/ex03")
+	public void ex03() {}
+	// 컨트롤러 메서드의 반환형이 void이면 @RequestMapping의 value가 viewName이 된다
+	// => 요청 주소 그대로 jsp를 찾아간다
+	
+//	@PostMapping("/ex03")
+//	public String ex03(MemberDTO dto, Model model) {
+//		model.addAttribute("dto", dto);
+//		return "ex03Result";
+//	}
+	
+	@PostMapping("/ex03")
+	public String ex03(@ModelAttribute("dto") MemberDTO dto) {
+		return "ex03Result";
+	}
+	// ModelAttribute에서 지정하는 이름은 view에서 EL태그로 참조할 이름이다 -> dto. 으로 참조가능
+}
+-------------
+package com.itbank.member;
+
+// 스프링 빈은 싱글톤인데, DTO는 서로 다른 값을 가지는 여러 객체가 존재해야 하므로, 스프링 빈으로 등록하지 않는다
+
+public class MemberDTO {
+	
+	private String name;
+	private int age;
+	
+	public String getName() {
+		return name;
+	}
+	public void setName(String name) {
+		this.name = name;
+	}
+	public int getAge() {
+		return age;
+	}
+	public void setAge(int age) {
+		this.age = age;
+	}
+}
+----------------------
+//ex03Result.jsp
+<%@ page language="java" contentType="text/html; charset=UTF-8"
+    pageEncoding="UTF-8"%>
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Insert title here</title>
+</head>
+<body>
+
+<h1>ex03 (POST)</h1>
+<hr>
+
+<h3>${dto.name }님은 ${dto.age }살이고, ${dto.age >= 20 ? '성인' : '미성년자' }입니다</h3>
+
+</body>
+</html>
 ====================================================================================
+//home.jsp
+<%@ page language="java" contentType="text/html; charset=UTF-8"
+    pageEncoding="UTF-8"%>
+<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<c:set var="cpath">${pageContext.request.contextPath }</c:set>
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>day01</title>
+</head>
+<body>
+
+<h1>컨트롤러 예제</h1>
+<hr>
+
+<ul>
+	<li><a href="${pageContext.request.contextPath }/ex01">ex01 - 링크를 클릭하면 연결되는 함수</a></li>
+	<li><a href="${cpath }/ex02">ex02 - 컨트롤러에 주로 사용하는 어노테이션</a></li>
+	<li><a href="${cpath }/ex03">ex03 - 커맨드 객체</a></li>
+	<li><a href="${cpath }/ex04">ex04 - Model And View</a></li>
+	<li><a href="${cpath }/ex05">ex05 - Path Variable</a></li>
+	<li><a href="${cpath }/calc">calc - 두 수의 사칙연산 계산기</a></li>
+</ul>
+
+</body>
+</html>
+--------------------
+//Ex04Controller
+package com.itbank.controller;
+
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.servlet.ModelAndView;
+
+import com.itbank.member.MemberDTO;
+
+@Controller
+public class Ex04Controller {
+
+	@GetMapping("/ex04")
+	public void abcd() {}
+	// 함수이름은 반환형과 아무 상관이 없다
+	
+	// 함수의 반환형은 viewName이고, view에게 객체를 전달하기 위해서 Model을 사용한다
+	// 둘다 DispatcherServlet을 통해서 전달하므로, 두 요소를 하나로 묶어서 반환하도록 ModelAndView를 사용할 수 있다
+	// ModelAndView = Model model + String viewName
+	@PostMapping("/ex04")
+//	public ModelAndView ex04(ModelAndView mav, MemberDTO dto) {	// ModelAndView는 매개변수로 받을 수도 있다
+	public ModelAndView ex04(MemberDTO dto) {
+		
+//		ModelAndView mav = new ModelAndView("ex04Result"); 	// 바로 생성자 매개변수로 viewName을 전달해도 된다
+		
+		ModelAndView mav = new ModelAndView();				// 기본 생성자로 객체를 생성하고
+		mav.setViewName("ex04Result");						// viewName 을 setter로 지정할 수 있다
+		
+		mav.addObject("dto", dto);		// (공통부분)view에게 전달할 attribute를 addObject(name, object) 로 전달한다
+		
+		return mav;
+	}
+}
+-----------------
+//ex04.jsp
+<%@ page language="java" contentType="text/html; charset=UTF-8"
+    pageEncoding="UTF-8"%>
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Insert title here</title>
+</head>
+<body>
+
+<h1>ex04 (GET)</h1>
+<hr>
+
+<form method="POST">
+	<input type="text" name="name" placeholder="이름을 입력하세요" required autofocus>
+	<input type="number" name="age" placeholder="나이를 입력하세요" required>
+	<input type="submit" value="제출">
+</form>
+
+</body>
+</html>
+----------------
+//ex04Result.jsp
+<%@ page language="java" contentType="text/html; charset=UTF-8"
+    pageEncoding="UTF-8"%>
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Insert title here</title>
+</head>
+<body>
+
+<h1>ex04 (POST)</h1>
+<hr>
+
+<h3>${dto.name }님은 ${dto.age }살이고, ${dto.age >= 20 ? '성인' : '미성년자' }입니다</h3>
+
+</body>
+</html>
+
+=====================================================================================
 package myServlet;
 
 import java.io.IOException;
