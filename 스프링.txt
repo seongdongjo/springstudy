@@ -2264,7 +2264,7 @@ public class HomeController {
 		return mav;
 	}
 }
-===============================================================================
+-----------------------
 //MemberController
 package com.itbank.controller;
 
@@ -2332,7 +2332,7 @@ public class MemberController {
 		return mav;
 	}
 }
-=====================================================================================================
+-------------------------
 //TestService
 package com.itbank.service;
 
@@ -2350,7 +2350,7 @@ public class TestService {
 		return dao.selectVersion();
 	}
 }
-================================================================================
+---------------------------
 //MemberService
 package com.itbank.service;
 
@@ -2399,7 +2399,7 @@ public class MemberService {
 	}
 
 }
-====================================================================
+------------------------
 //TestDAO
 package com.itbank.model;
 
@@ -2411,7 +2411,7 @@ public interface TestDAO {
 	String selectVersion();
 }
 
-===================================================================
+-----------------------
 //LoginDAO
 package com.itbank.model;
 
@@ -2421,7 +2421,7 @@ public interface LoginDAO {
 	MemberDTO login(MemberDTO dto); //멤버를 반환
 	
 }
-====================================================================
+--------------------------
 //MemberDTO
 package com.itbank.member;
 
@@ -2470,7 +2470,7 @@ public class MemberDTO {
 	}
 	
 }
-===============================================================================
+--------------------------
 //MemberTestDAO
 package com.itbank.member;
 
@@ -2497,7 +2497,7 @@ public class MemberTestDAO {
 		return sst.selectOne("now");
 	}
 }
-=====================================================================================
+-----------------------
 //MemberDAO
 package com.itbank.member;
 
@@ -2537,9 +2537,208 @@ public class MemberDAO {
 		return row;
 	}
 }
-=====================================================================================
+---------------------
+//config/sqlmap-config.xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE configuration PUBLIC 
+	"-//mybatis.org//DTD Config 3.0//EN" 
+	"http://mybatis.org/dtd/mybatis-3-config.dtd">
+	
+<configuration>
+	<settings>
+		<setting name="cacheEnabled" value="false" />
+		<setting name="useGeneratedKeys" value="false" />
+		<setting name="mapUnderscoreToCamelCase" value="false" />
+		<!-- 	user_name => userName	-->
+	</settings>
+	
+	<typeAliases>
+		<typeAlias type="com.itbank.member.MemberDTO" alias="member" />
+	</typeAliases>
+	<!-- type == 자료형, 자료형 이름이 너무 길어서 별명으로 부르면 길이를 짧게 사용할 수 있다 -->
+	
+</configuration>
+------------------------
+//config/sqlmap-test.xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC 
+	"-//mybatis.org//DTD Mapper 3.0//EN" 
+	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+	
+<mapper namespace="MemberTestDAO">
+	<!-- sst.selectOne(statement), statement가 id에 맵핑 -->
+	<!-- select 이므로 반환하는 데이터의 자료형을 명시해야 처리가 가능하다 -->
+	
+	<select id="test1" resultType="string">
+		select banner from v$version
+	</select>
+	
+	<select id="now" resultType="java.sql.Date">
+		select sysdate from dual
+	</select>
+	
+</mapper>	
+----------------------
+//config/sqlmap-login.xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC 
+	"-//mybatis.org//DTD Mapper 3.0//EN" 
+	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+	
+<mapper namespace="com.itbank.model.LoginDAO">	<!-- namespace : 패키지.인터페이스DAO -->
+	<select id="login" resultType="member" parameterType="member"> <!-- id: 인터페이스의 메서드이름 -->
+		select * from member where userid = #{userid} and userpw = #{userpw}
+	</select>
+</mapper>	
+-------------------------
+//config/sqlmap-member.xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC 
+	"-//mybatis.org//DTD Mapper 3.0//EN" 
+	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+	
+<mapper namespace="MemberDAO">
+<!--<select id="itbank" resultType="com.itbank.member.MemberDTO"> -->
+	<select id="itbank" resultType="member">
+		select * from member
+	</select>
+	
+	<select id="selectOrder" resultType="member" parameterType="String">
+		select * from member order by ${order}
+	</select>
+	
+	<insert id="insert" parameterType="member">
+		insert into member values (
+			#{userid}, 
+			#{userpw}, 
+			#{username}, 
+			#{email}, 
+			#{gender}
+		)
+	</insert>
+</mapper>	
+----------------------------
+//home.jsp
+<%@ page language="java" contentType="text/html; charset=UTF-8"
+    pageEncoding="UTF-8"%>
+<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<c:set var="cpath">${pageContext.request.contextPath }</c:set>
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Insert title here</title>
+</head>
+<body>
+
+<h1>myBatis 연습 (2)</h1>
+<hr>
+
+<h3>DB 접속 정보 : ${test }</h3>
+
+<ul>
+	<li><a href="${cpath }/memberList">회원 목록</a></li>
+	<li><a href="${cpath }/memberList/username">회원 목록 - 이름순으로 정렬</a></li>
+	<li><a href="${cpath }/memberList/userid">회원 목록 - ID순으로 정렬</a></li>
+	<li><a href="${cpath }/memberAdd">회원 추가</a></li>
+	<li><a href="${cpath }/loginTest">로그인 테스트</a></li>
+</ul>
+
+</body>
+</html>
+-------------------------------
+//loginTest.jsp
+<%@ page language="java" contentType="text/html; charset=UTF-8"
+    pageEncoding="UTF-8"%>
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Insert title here</title>
+</head>
+<body>
+
+<h1>로그인 테스트 (인터페이스 DAO와 xml을 연결하는 형태)</h1>
+<hr>
+
+<form method="POST">
+	<p><input name="userid" placeholder="ID"></p>
+	<p><input name="userpw" type="password" placeholder="Password"></p>
+	<p><input type="submit"></p>
+</form>
+
+</body>
+</html>
+------------------------------
+//memberList.jsp
+<%@ page language="java" contentType="text/html; charset=UTF-8"
+    pageEncoding="UTF-8"%>
+<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Insert title here</title>
+</head>
+<body>
+
+<h1>회원 목록</h1>
+<hr>
+<h3>${test }</h3>
+<h3>${now }</h3>
+
+<%-- list 확인 : ${list } --%>
+<table border="1" cellpadding="7" cellspacing="0">
+	<tr>
+		<th>userid</th>
+		<th>userpw</th>
+		<th>username</th>
+		<th>email</th>
+		<th>gender</th>
+	</tr>
+	<c:forEach var="dto" items="${list }">
+	<tr>
+		<td>${dto.userid }</td>
+		<td>${dto.userpw }</td>
+		<td>${dto.username }</td>
+		<td>${dto.email }</td>
+		<td>${dto.gender }</td>
+	</tr>
+	</c:forEach>
+</table>
 
 
+</body>
+</html>
+----------------------
+//memberAdd.jsp
+<%@ page language="java" contentType="text/html; charset=UTF-8"
+    pageEncoding="UTF-8"%>
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Insert title here</title>
+</head>
+<body>
+
+<h1>회원 추가</h1>
+<hr>
+<form method="POST">
+	<p><input type="text" name="userid" placeholder="ID (Primary Key)" required autofocus></p>
+	<p><input type="password" name="userpw" placeholder="Password" required></p>
+	<p><input type="text" name="username" placeholder="Name" required></p>
+	<p><input type="email" name="email" placeholder="foo@bar.com" required></p>
+	<p>
+		<label><input type="radio" name="gender" value="남성" required>남성</label>
+		<label><input type="radio" name="gender" value="여성" required>여성</label>
+	</p>
+	<p><input type="submit"></p>
+</form>
+
+</body>
+</html>
+===========================================================
 package myServlet;
 
 import java.io.IOException;
