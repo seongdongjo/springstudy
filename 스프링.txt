@@ -2333,6 +2333,212 @@ public class MemberController {
 	}
 }
 =====================================================================================================
+//TestService
+package com.itbank.service;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.itbank.model.TestDAO;
+
+@Service
+public class TestService {
+
+	@Autowired private TestDAO dao;
+	
+	public String getTest() {
+		return dao.selectVersion();
+	}
+}
+================================================================================
+//MemberService
+package com.itbank.service;
+
+import java.sql.Date;
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.itbank.member.MemberDAO;
+import com.itbank.member.MemberDTO;
+import com.itbank.member.MemberTestDAO;
+import com.itbank.model.LoginDAO;
+
+@Service
+public class MemberService {
+	
+	@Autowired private MemberDAO dao;
+	@Autowired private MemberTestDAO tdao;
+	
+	@Autowired private LoginDAO ldao;	// 인터페이스 DAO
+
+	public String getTest() {
+		String test = tdao.selectVersion();
+		return test;
+	}
+
+	public Date getSysdate() {
+		return tdao.selectSysdate();
+	}
+
+	public List<MemberDTO> getList() {
+		return dao.selectList();
+	}
+
+	public List<MemberDTO> selectOrderBy(String order) {
+		return dao.selectList(order);
+	}
+
+	public int insert(MemberDTO dto) {
+		return dao.insert(dto);
+	}
+
+	public MemberDTO loginTest(MemberDTO dto) {
+		return ldao.login(dto);
+	}
+
+}
+====================================================================
+//TestDAO
+package com.itbank.model;
+
+import org.apache.ibatis.annotations.Select;
+
+public interface TestDAO {
+
+	@Select("select banner from v$version")
+	String selectVersion();
+}
+
+===================================================================
+//LoginDAO
+package com.itbank.model;
+
+import com.itbank.member.MemberDTO;
+
+public interface LoginDAO {
+	MemberDTO login(MemberDTO dto); //멤버를 반환
+	
+}
+====================================================================
+//MemberDTO
+package com.itbank.member;
+
+public class MemberDTO {
+
+	private String userid, userpw, username, email, gender;
+
+	public String getUserid() {
+		return userid;
+	}
+
+	public void setUserid(String userid) {
+		this.userid = userid;
+	}
+
+	public String getUserpw() {
+		return userpw;
+	}
+
+	public void setUserpw(String userpw) {
+		this.userpw = userpw;
+	}
+
+	public String getUsername() {
+		return username;
+	}
+
+	public void setUsername(String username) {
+		this.username = username;
+	}
+
+	public String getEmail() {
+		return email;
+	}
+
+	public void setEmail(String email) {
+		this.email = email;
+	}
+
+	public String getGender() {
+		return gender;
+	}
+
+	public void setGender(String gender) {
+		this.gender = gender;
+	}
+	
+}
+===============================================================================
+//MemberTestDAO
+package com.itbank.member;
+
+import java.sql.Date;
+
+import org.mybatis.spring.SqlSessionTemplate;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Repository;
+
+@Repository
+public class MemberTestDAO {	
+
+	@Autowired private SqlSessionTemplate sst;
+	
+	// DB의 버전정보를 String 형식으로 반환하는 함수를 작성하고 싶다
+	public String selectVersion() {
+		String statement = "test1";				// test1 이라는 id의 mapper 코드를 호출
+		String test = sst.selectOne(statement);	// 지정한 sql로 하나의 문자열을 반환받겠다
+		return test;							// DB에서 받은 내용을 Service로 반환
+	}
+	
+	public Date selectSysdate() {
+		
+		return sst.selectOne("now");
+	}
+}
+=====================================================================================
+//MemberDAO
+package com.itbank.member;
+
+import java.util.List;
+
+import org.mybatis.spring.SqlSessionTemplate;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Repository;
+
+@Repository
+public class MemberDAO {
+
+	@Autowired private SqlSessionTemplate sst;
+
+	public List<MemberDTO> selectList() {
+		List<MemberDTO> list = sst.selectList("itbank");
+		
+//		sst.selectList(statement);
+//		별도의 매개변수 전달 없이 id만으로 호출하는 형식
+		
+//		sst.selectList(statement, parameter);
+//		파라미터를 DTO 타입이나 HashMap 타입으로 지정하여 전달한다
+		
+//		sst.selectList(statement, parameter, rowBounds);
+//		파라미터를 전달하면서 결과를 myBatis에 의해서 페이징 처리하여 가져온다
+		
+		return list;
+	}
+
+	public List<MemberDTO> selectList(String order) {
+		List<MemberDTO> list = sst.selectList("selectOrder", order);
+		return list;
+	}
+
+	public int insert(MemberDTO dto) {
+		int row = sst.insert("insert", dto);
+		return row;
+	}
+}
+=====================================================================================
+
 
 package myServlet;
 
