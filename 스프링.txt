@@ -3174,6 +3174,209 @@ ${cpath }
 </html>
 
 =================================================================================
+//day07
+//servlet-context.xml
+<?xml version="1.0" encoding="UTF-8"?>
+<beans:beans xmlns="http://www.springframework.org/schema/mvc"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:beans="http://www.springframework.org/schema/beans"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xsi:schemaLocation="http://www.springframework.org/schema/mvc https://www.springframework.org/schema/mvc/spring-mvc.xsd
+		http://www.springframework.org/schema/beans https://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/context https://www.springframework.org/schema/context/spring-context.xsd">
+
+	<!-- DispatcherServlet Context: defines this servlet's request-processing infrastructure -->
+	
+	<!-- Enables the Spring MVC @Controller programming model -->
+	<annotation-driven />
+
+	<!-- Handles HTTP GET requests for /resources/** by efficiently serving up static resources in the ${webappRoot}/resources directory -->
+	<resources mapping="/resources/**" location="/resources/" />
+
+	<!-- Resolves views selected for rendering by @Controllers to .jsp resources in the /WEB-INF/views directory -->
+	<beans:bean class="org.springframework.web.servlet.view.InternalResourceViewResolver">
+		<beans:property name="prefix" value="/WEB-INF/views/" />
+		<beans:property name="suffix" value=".jsp" />
+	</beans:bean>
+	
+	<context:component-scan base-package="com.itbank.controller" />
+	
+	
+	
+</beans:beans> */
+----------------------
+//root-context.xml
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:mybatis-spring="http://mybatis.org/schema/mybatis-spring"
+	xsi:schemaLocation="http://mybatis.org/schema/mybatis-spring http://mybatis.org/schema/mybatis-spring-1.2.xsd
+		http://www.springframework.org/schema/beans https://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.3.xsd">
+	
+	<!-- Root Context: defines shared resources visible to all other web components -->
+	<!-- 
+			Connection을 관리해주는 dataSource는 hikariCP로 처리하고,
+			DB에 접속 및 쿼리문 수행, 객체-관계 맵핑은 myBatis 로 처리한다
+	 -->
+	<bean id="hikariConfig" class="com.zaxxer.hikari.HikariConfig">
+		<property name="driverClassName" value="oracle.jdbc.driver.OracleDriver" />
+		<property name="jdbcUrl" value="jdbc:oracle:thin:@192.168.1.100:1521:xe" />
+		<property name="username" value="c##itbank" />
+		<property name="password" value="it" />
+	</bean>
+	
+	<bean id="dataSource" class="com.zaxxer.hikari.HikariDataSource" destroy-method="close">
+		<constructor-arg ref="hikariConfig" />
+	</bean>
+	
+	<bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+		<property name="dataSource" ref="dataSource" />
+		
+		<!-- myBatis 에서 xml형식의 mapper 파일을 작성할때 사용하는 설정 -->
+		<property name="configLocation" value="classpath:config/mybatis-config.xml" />
+		
+		<!-- mapper 파일의 경로를 리스트 형식으로 작성 -->
+		<property name="mapperLocations">
+			<list>
+				<value>classpath:config/sqlmap-member.xml</value>
+				<value>classpath:config/sqlmap-book.xml</value>
+			</list>
+		</property>
+	</bean>
+	
+	<bean id="sqlSessionTemplate" class="org.mybatis.spring.SqlSessionTemplate" destroy-method="close">
+		<constructor-arg ref="sqlSessionFactory" />
+	</bean>
+	
+	<context:component-scan base-package="com.itbank.service" />
+	<context:component-scan base-package="com.itbank.member" />
+	
+	<mybatis-spring:scan base-package="com.itbank.model" /><!-- interface만 -->
+	<mybatis-spring:scan base-package="com.itbank.member" />
+	<mybatis-spring:scan base-package="com.itbank.book" />
+		
+</beans>
+----------------------
+//HomeController.java
+package com.itbank.controller;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.servlet.ModelAndView;
+
+import com.itbank.service.TestService;
+
+@Controller
+public class HomeController {
+	
+	@Autowired private TestService ts;
+
+	@RequestMapping("/")
+	public ModelAndView home() {
+		ModelAndView mav = new ModelAndView("home");
+		String test = ts.getTest();
+		mav.addObject("test", test);
+		return mav;
+	}
+}
+-------------------------
+//MemberController.java
+package com.itbank.controller;
+
+import java.util.List;
+
+import javax.servlet.http.HttpSession;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DuplicateKeyException;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.servlet.ModelAndView;
+
+import com.itbank.member.MemberDTO;
+import com.itbank.service.MemberService;
+
+@Controller
+public class MemberController {
+	
+	@Autowired private MemberService ms;
+
+	@GetMapping("/memberList")
+	public ModelAndView memberList() {
+		ModelAndView mav = new ModelAndView();
+		List<MemberDTO> list = ms.getMemberList();
+		mav.addObject("list", list);
+		return mav;
+	}
+	
+	@GetMapping("/join")
+	public void join() {}
+	
+	@PostMapping("/join")
+	public String join(MemberDTO dto) {
+		int row = ms.join(dto);
+		System.out.println(row == 1 ? "가입 성공" : "가입 실패");
+		return "redirect:/login";
+	}
+	
+	@GetMapping("/login") 
+	public void login() {}
+	
+	@PostMapping("/login")
+	public String login(MemberDTO dto, HttpSession session) {
+		MemberDTO login = ms.login(dto);		// DB에서 받아온 계정을
+		session.setAttribute("login", login);	// 현재 세션에 저장
+		System.out.println(login == null ? "실패" : "성공 : " + login.getUserid());
+		return "redirect:/";
+	}
+	
+	@GetMapping("/logout")
+	public String logout(HttpSession session) {
+		session.invalidate();
+		return "redirect:/";
+	}
+	
+	@GetMapping("/newPass")
+	public void newPass() {}
+	
+	@PostMapping("/newPass")
+	public ModelAndView newPass(MemberDTO dto) {
+		ModelAndView mav = new ModelAndView("alert");
+		
+		// ID와 Email이 일치하는 계정이 있는가
+		MemberDTO target = ms.findMemberByEmail(dto);
+		
+		if(target != null) {
+			// 계정이 있으면, 새로 문자열을 만들어서 update 하고
+			String newPass = ms.newPass(target);
+			
+			// 사용자에게 신규 비밀번호를 alert을 통해서 알려주기
+			// 로그인 페이지로 이동
+			mav.addObject("msg", "변경된 비밀번호는 [" + newPass + "] 입니다");
+			mav.addObject("url", "/login");
+		}
+		else {
+			// 일치하는 계정이 없다는 메시지를 alert을 통해서 알려주기
+			// 이전페이지로 이동
+			mav.addObject("msg", "입력한 정보와 일치하는 계정이 없습니다");
+		}
+		return mav;
+	}
+	
+	@ExceptionHandler(DuplicateKeyException.class)	// PK나 UK가 중복되어 발생하는 예외
+	public ModelAndView duplicateJoin(DuplicateKeyException e) {
+		ModelAndView mav = new ModelAndView("alert");
+		mav.addObject("msg", "이미 사용중인 ID입니다. 다른 ID로 가입을 시도해 주세요");
+		return mav;
+	}
+}
+----------------
+
 
 
 
