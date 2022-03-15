@@ -4169,6 +4169,271 @@ public interface BookDAO {
 	
 </beans:beans> */
 -------------------------
+//LoginIntercepter.java
+package com.itbank.intercepter;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
+
+import org.springframework.web.servlet.ModelAndView;
+import org.springframework.web.servlet.handler.HandlerInterceptorAdapter;
+
+import com.itbank.member.MemberDTO;
+
+public class LoginIntercepter extends HandlerInterceptorAdapter {
+
+	// Menu - Source - Override/Implement method
+	
+	@Override
+	public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler)
+			throws Exception {
+		// Handle : 컨트롤러가 요청을 처리하는 작업을 말한다
+		// preHandler : 요청이 컨트롤러에 도달하기 전에 사전 작업하는 내용
+		
+		HttpSession session = request.getSession();
+		MemberDTO login = (MemberDTO) session.getAttribute("login");
+		System.out.print("1) ");
+		System.out.println(login != null ? "로그인 사용자 : " + login.getUserid() : "로그인 없음" );
+		
+		if(login != null) {
+			return true;
+		}
+//		response.getWriter().println("로그인 객체가 없어서 다른 처리를 해야 합니다");
+		response.sendRedirect(request.getContextPath() + "/login");
+		return false;	// 반환값에 따라서 기존 요청에 대한 처리를 그대로 진행하거나	true
+						// 혹은 진행을 중단하고 새로운 응답을 만들어서 보낸다		false
+	}
+
+	@Override
+	public void postHandle(HttpServletRequest request, HttpServletResponse response, Object handler,
+			ModelAndView modelAndView) throws Exception {
+
+	}
+
+	@Override
+	public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex)
+			throws Exception {
+
+	}
+-----------------------
+//HomeController
+package com.itbank.controller;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.servlet.ModelAndView;
+
+import com.itbank.service.TestService;
+
+@Controller
+public class HomeController {
+	
+	@Autowired private TestService ts;
+
+	@RequestMapping("/")
+	public ModelAndView home() {
+		ModelAndView mav = new ModelAndView("home");
+		String test = ts.getTest();
+		mav.addObject("test", test);
+		return mav;
+	}
+}
+---------------------
+//BookController
+package com.itbank.controller;
+
+import java.util.HashMap;
+import java.util.List;
+
+import javax.servlet.http.HttpSession;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.ModelAndView;
+
+import com.itbank.book.BookDTO;
+import com.itbank.service.BookService;
+
+@Controller
+public class BookController {
+
+	@Autowired private BookService bs;
+	
+	@GetMapping("/bookList")
+	public String bookList() {
+		return "redirect:/bookList/idx";
+	}
+	
+	@GetMapping("/bookList/{order}")
+	public ModelAndView bookList(@RequestParam HashMap<String, String> map,
+								 @PathVariable String order) {
+		ModelAndView mav = new ModelAndView("bookList");
+		
+		map.put("order", order);
+//		System.out.println("map : " + map);
+//		HashMap을 이용하여 parameter를 받을 때는 어노테이션 @RequestParam을 생략하면 안된다
+		
+		List<BookDTO> list = bs.getList(map);
+		mav.addObject("list", list);
+		return mav;
+	}
+	
+	@GetMapping("/deleteBook/{idx}")	
+	public ModelAndView deleteBook(@PathVariable int idx) {
+		
+		ModelAndView mav = new ModelAndView("alert");
+		int row = bs.deleteBook(idx);
+
+		if(row == 1) {
+			mav.addObject("msg", idx + "번 도서정보가 삭제되었습니다");
+			mav.addObject("url", "bookList");
+		}
+		else {
+			mav.addObject("msg", "삭제가 처리되지 않았습니다");
+			// url을 지정하지 않으면 history.go(-1) 로 이전 페이지로 이동하도록
+		}
+		return mav;
+	}
+	
+	@GetMapping("/modifyBook/{idx}")
+	public ModelAndView modify(@PathVariable int idx) {
+		ModelAndView mav = new ModelAndView("modifyBook");
+		BookDTO dto = bs.select(idx);	// 객체 하나의 정보를 불러와서
+		mav.addObject("dto", dto);		// 넘겨주고, jsp에서 form 태그의 value값으로 활용한다
+		return mav;
+	}
+	
+	@PostMapping("/modifyBook/{idx}")
+	public ModelAndView modify(BookDTO dto) {	// 사용자가 수정 이후 제출한 데이터를 dto로 받는다
+		ModelAndView mav = new ModelAndView("alert");
+		System.out.println("수정 도서의 번호 : " + dto.getIdx());
+		int row = bs.modify(dto);
+		if(row == 1) {
+			mav.addObject("msg", "수정 성공 !!");
+			mav.addObject("url", "bookList");
+		}
+		else {
+			mav.addObject("msg", "수정 실패 !!");
+		}
+		return mav;
+	}
+	
+	@GetMapping("/addBook")
+	public void addBook() {
+		System.out.println("2) 컨트롤러");
+	}
+	
+	@PostMapping("/addBook")
+	public ModelAndView addBook(BookDTO dto) {
+		ModelAndView mav = new ModelAndView("alert");
+		int row = bs.insert(dto);
+		mav.addObject("msg", row == 1 ? "추가 성공" : "추가 실패");
+		mav.addObject("url", row == 1 ? "bookList" : "");
+		return mav;
+	}
+}
+----------------------
+//MemberController
+package com.itbank.controller;
+
+import java.util.List;
+
+import javax.servlet.http.HttpSession;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DuplicateKeyException;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.servlet.ModelAndView;
+
+import com.itbank.member.MemberDTO;
+import com.itbank.service.MemberService;
+
+@Controller
+public class MemberController {
+	
+	@Autowired private MemberService ms;
+
+	@GetMapping("/memberList")
+	public ModelAndView memberList() {
+		ModelAndView mav = new ModelAndView();
+		List<MemberDTO> list = ms.getMemberList();
+		mav.addObject("list", list);
+		return mav;
+	}
+	
+	@GetMapping("/join")
+	public void join() {}
+	
+	@PostMapping("/join")
+	public String join(MemberDTO dto) {
+		int row = ms.join(dto);
+		System.out.println(row == 1 ? "가입 성공" : "가입 실패");
+		return "redirect:/login";
+	}
+	
+	@GetMapping("/login") 
+	public void login() {}
+	
+	@PostMapping("/login")
+	public String login(MemberDTO dto, HttpSession session) {
+		MemberDTO login = ms.login(dto);		// DB에서 받아온 계정을
+		session.setAttribute("login", login);	// 현재 세션에 저장
+		System.out.println(login == null ? "실패" : "성공 : " + login.getUserid());
+		return "redirect:/";
+	}
+	
+	@GetMapping("/logout")
+	public String logout(HttpSession session) {
+		session.invalidate();
+		return "redirect:/";
+	}
+	
+	@GetMapping("/newPass")
+	public void newPass() {}
+	
+	@PostMapping("/newPass")
+	public ModelAndView newPass(MemberDTO dto) {
+		ModelAndView mav = new ModelAndView("alert");
+		
+		// ID와 Email이 일치하는 계정이 있는가
+		MemberDTO target = ms.findMemberByEmail(dto);
+		
+		if(target != null) {
+			// 계정이 있으면, 새로 문자열을 만들어서 update 하고
+			String newPass = ms.newPass(target);
+			
+			// 사용자에게 신규 비밀번호를 alert을 통해서 알려주기
+			// 로그인 페이지로 이동
+			mav.addObject("msg", "변경된 비밀번호는 [" + newPass + "] 입니다");
+			mav.addObject("url", "/login");
+		}
+		else {
+			// 일치하는 계정이 없다는 메시지를 alert을 통해서 알려주기
+			// 이전페이지로 이동
+			mav.addObject("msg", "입력한 정보와 일치하는 계정이 없습니다");
+		}
+		return mav;
+	}
+	
+	@ExceptionHandler(DuplicateKeyException.class)	// PK나 UK가 중복되어 발생하는 예외
+	public ModelAndView duplicateJoin(DuplicateKeyException e) {
+		ModelAndView mav = new ModelAndView("alert");
+		mav.addObject("msg", "이미 사용중인 ID입니다. 다른 ID로 가입을 시도해 주세요");
+		return mav;
+	}
+}
+----------------------
+
+
 
 
 
