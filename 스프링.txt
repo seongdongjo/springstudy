@@ -4552,8 +4552,298 @@ public class MemberService {
 
 }
 ---------------------
+//TestDAO
+package com.itbank.model;
 
+import org.apache.ibatis.annotations.Select;
+import org.springframework.stereotype.Repository;
 
+@Repository
+public interface TestDAO {
+
+	@Select("select banner from v$version")
+	String selectVersion();
+
+	
+}
+---------------------
+//MemberDTO
+package com.itbank.member;
+
+// LOMBOK : getter/setter/contructor/toString
+public class MemberDTO {
+	
+	private String userid, userpw, username, email, gender;
+	
+	@Override
+	public String toString() {
+		return String.format("{%s, %s, %s, %s, %s}", userid, userpw, username, email, gender);
+	}
+
+	public String getUserid() {
+		return userid;
+	}
+	public void setUserid(String userid) {
+		this.userid = userid;
+	}
+	public String getUserpw() {
+		return userpw;
+	}
+	public void setUserpw(String userpw) {
+		this.userpw = userpw;
+	}
+	public String getUsername() {
+		return username;
+	}
+	public void setUsername(String username) {
+		this.username = username;
+	}
+	public String getEmail() {
+		return email;
+	}
+	public void setEmail(String email) {
+		this.email = email;
+	}
+	public String getGender() {
+		return gender;
+	}
+	public void setGender(String gender) {
+		this.gender = gender;
+	}
+	
+	
+
+}
+------------------------
+//MemberDAO
+
+package com.itbank.member;
+
+import java.util.List;
+
+import org.apache.ibatis.annotations.Select;
+
+public interface MemberDAO {
+
+	@Select("select * from member order by userid")
+	List<MemberDTO> selectList();
+	
+	int insert(MemberDTO dto);
+
+	MemberDTO selectMember(MemberDTO dto);
+
+	int update(MemberDTO target);
+	
+	// 어노테이션 대신 XML 설정으로 쿼리문 수행하기
+	// namespace 는 패키지.인터페이스이름
+	// id는 메서드이름
+
+	// <mapper namespace="com.itbank.member.MemberDAO">
+	//		<select id="selectMembmer" resultType="com.itbank.member.MemberDTO">
+	//			select * from member where userid = #{userid} and userpw = #{userpw}
+	//		</select>
+	// </mapper>
+	
+
+}
+------------------------------
+//BookDTO
+package com.itbank.book;
+
+import java.sql.Date;
+
+//  TABLE : BOOK
+//	IDX			NUMBER				No	"C##ITBANK"."BOOK_SEQ"."NEXTVAL"
+//	NAME		VARCHAR2(200 BYTE)	No	
+//	AUTHOR		VARCHAR2(50 BYTE)	No	
+//	PUBLISHER	VARCHAR2(100 BYTE)	No	
+//	PUBLISHDATE	DATE				No	
+//	PRICE		NUMBER				No	
+//	DESCRIPTION	VARCHAR2(2000 BYTE)	No	
+
+public class BookDTO {
+
+	private int idx;
+	private String name, author, publisher;
+	private Date publishDate;
+	private int price;
+	private String description;
+	
+	public int getIdx() {
+		return idx;
+	}
+	public void setIdx(int idx) {
+		this.idx = idx;
+	}
+	public String getName() {
+		return name;
+	}
+	public void setName(String name) {
+		this.name = name;
+	}
+	public String getAuthor() {
+		return author;
+	}
+	public void setAuthor(String author) {
+		this.author = author;
+	}
+	public String getPublisher() {
+		return publisher;
+	}
+	public void setPublisher(String publisher) {
+		this.publisher = publisher;
+	}
+	public Date getPublishDate() {
+		return publishDate;
+	}
+	public void setPublishDate(Date publishDate) {
+		this.publishDate = publishDate;
+	}
+	public int getPrice() {
+		return price;
+	}
+	public void setPrice(int price) {
+		this.price = price;
+	}
+	public String getDescription() {
+		return description;
+	}
+	public void setDescription(String description) {
+		this.description = description;
+	}
+}
+------------------------
+//BookDAO
+package com.itbank.book;
+
+import java.util.HashMap;
+import java.util.List;
+
+import org.apache.ibatis.annotations.Delete;
+import org.apache.ibatis.annotations.Select;
+
+public interface BookDAO {
+
+	List<BookDTO> selectList(HashMap<String, String> map);
+
+	@Delete("delete book where idx=#{idx}")
+	int delete(int idx);
+
+	@Select("select * from book where idx=#{idx}")
+	BookDTO select(int idx);
+
+	int update(BookDTO dto);
+
+	int insert(BookDTO dto);
+
+}
+-----------------------------
+//mybatis-config.xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE configuration PUBLIC 
+	"-//mybatis.org//DTD Config 3.0//EN" 
+	"http://mybatis.org/dtd/mybatis-3-config.dtd">
+	
+<configuration>
+	<settings>
+		<setting name="cacheEnabled" value="false" />
+		<setting name="useGeneratedKeys" value="false" />
+		<setting name="mapUnderscoreToCamelCase" value="false" />
+		<!-- 	user_name => userName	-->
+	</settings>
+	
+	<typeAliases>
+		<typeAlias type="com.itbank.member.MemberDTO" alias="member" />
+		<typeAlias type="com.itbank.book.BookDTO" alias="book" />
+	</typeAliases>
+	
+</configuration>
+--------------------------------
+//sqlmap-book.xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC 
+	"-//mybatis.org//DTD Mapper 3.0//EN" 
+	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+	
+<mapper namespace="com.itbank.book.BookDAO">
+	
+	<select id="selectList" resultType="book" parameterType="hashmap">
+		select * from book
+		<if test="column != null">
+			<choose>
+				<when test="column == 'idx'">
+					where ${column} = #{search}
+				</when>
+				<when test="column == 'name' or column == 'author'">
+					where ${column} like '%'||#{search}||'%'
+				</when>
+			</choose>
+		</if> 
+			order by ${order}
+	</select>
+	
+	<update id="update" parameterType="book">
+		update book
+			<set>
+				<if test="name != null">name = #{name},</if>
+				<if test="author != null">author = #{author},</if>
+				<if test="publisher != null">publisher = #{publisher},</if>
+				<if test="publishDate != null">publishDate = #{publishDate},</if>
+				<if test="price != null">price = #{price},</if>
+				<if test="description != null">description = #{description},</if>
+			</set>
+			where
+				idx = #{idx}
+	</update>
+	
+	<insert id="insert" parameterType="book">
+		insert into book values (
+			book_seq.nextval,
+			#{name}, #{author}, #{publisher}, #{publishDate}, #{price}, #{description}		
+		)
+	</insert>
+	
+</mapper>	
+--------------------------
+//sqlmap-memeber.xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC 
+	"-//mybatis.org//DTD Mapper 3.0//EN" 
+	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+	
+<mapper namespace="com.itbank.member.MemberDAO">
+
+	<select id="selectMember" resultType="member" parameterType="member">
+		select * from member 
+			where 
+				userid = #{userid} 
+				<if test="userpw != null">and userpw = #{userpw}</if>
+				<if test="email != null">and email = #{email}</if>
+	</select>
+	
+	<update id="update" parameterType="member">
+		update member 
+			<set>
+				<if test="userpw != null">userpw = #{userpw},</if>
+				<if test="username != null">username = #{username},</if>
+				<if test="email != null">email = #{email},</if>
+				<if test="gender != null">gender = #{gender},</if>
+			</set>
+			where
+				userid = #{userid}
+	</update>
+	
+	<insert id="insert" parameterType="member">
+		insert into member values (
+			#{userid},
+			#{userpw},
+			#{username},
+			#{email},
+			#{gender}
+		)
+	</insert>
+</mapper>
+------------------------
 
 
 package myServlet;
