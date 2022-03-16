@@ -4878,6 +4878,308 @@ public interface BookDAO {
 </header>
 ---------------------
 //home.jsp
+<%@ page language="java" contentType="text/html; charset=UTF-8"
+    pageEncoding="UTF-8"%>
+<%@ include file="header.jsp" %>
+
+<h2>대문 페이지</h2>
+
+
+</body>
+</html>
+-----------------------
+//alert.jsp
+<%@ page language="java" contentType="text/html; charset=UTF-8"
+    pageEncoding="UTF-8"%>
+<%@ include file="header.jsp" %>
+
+<div id="alert" class="jcce aice ffc" 
+	 style="border: 2px solid black;
+	        box-shadow: 5px 5px grey;
+	        width: 500px;
+	        height: 300px;
+	        margin: 50px auto;
+	        border-radius: 25px;
+	        
+	        opacity: 0;
+	        position: absolute;
+	        top: 50%;
+	        transition-duration: 1.5s">
+	<div style="font-size: 16px; font-weight: bold; margin: 30px;">
+		${msg }
+	</div>
+	<button class="btn">확인</button>
+</div>
+
+<script>
+	const cpath = '${cpath}'
+	const msg = '${msg}'
+	const url = '${url}'
+	const alert = document.getElementById('alert')
+	
+	const clientWidth = document.body.clientWidth
+	const alertWidth = alert.clientWidth
+	const left = (clientWidth / 2) - (alertWidth / 2)
+	
+	window.onload = function(event) {
+		alert.style.left = left + 'px'
+		console.log('onload !!')
+		alert.style.opacity = 1;
+		alert.style.top = '30%'
+	}
+	document.querySelector('button').onclick = function() {
+		if(url == '') {
+	 		history.go(-1);
+	 	}
+	 	else {
+	 		location.href = cpath + '/' + url
+	 	}
+	}
+	
+// 	alert(msg)
+// 	if(url == '') {
+// 		history.go(-1);
+// 	}
+// 	else {
+// 		location.href = cpath + '/' + url
+// 	}
+</script>
+
+</body>
+</html>
+------------------------
+//login.jsp
+<%@ page language="java" contentType="text/html; charset=UTF-8"
+    pageEncoding="UTF-8"%>
+<%@ include file="header.jsp" %>
+
+<h2>로그인</h2>
+<hr>
+<form method="POST" class="ffc aice jcfs">
+	<p><input type="text" name="userid" placeholder="ID" required autofocus></p>
+	<p><input type="password" name="userpw" placeholder="Password" required></p>
+	<p><input type="submit"></p>
+</form>
+
+<div class="jcce">
+	<a href="${cpath }/join">아직 회원이 아니십니까?</a>&nbsp; &nbsp;
+	<a href="${cpath }/newPass">비밀번호를 분실했습니다</a>
+</div>
+
+</body>
+</html>
+----------------------
+//join.jsp
+<%@ page language="java" contentType="text/html; charset=UTF-8"
+    pageEncoding="UTF-8"%>
+<%@ include file="header.jsp" %>
+
+<h2>회원 가입</h2>
+<!-- 
+		회원 가입 코드를 직접 구현하고, myBatis에서는 xml을 활용하여 처리해보세요
+		가입을 처리한 이후 로그인 페이지로 리다이렉트 하세요
+ -->
+<div class="jcce">
+<form method="POST">
+	<p><input type="text" name="userid" placeholder="ID" required autofocus></p>
+	<p><input type="password" name="userpw" placeholder="Password" required></p>
+	<p><input type="text" name="username" placeholder="Name" required></p>
+	<p><input type="text" name="email" placeholder="E-mail" required></p>
+	<p>
+		<label><input type="radio" name="gender" value="남성" required>남성</label>
+		<label><input type="radio" name="gender" value="여성" required>여성</label>
+	</p>
+	<p><input type="submit" value="가입"></p>
+</form>
+</div>
+
+</body>
+</html>
+----------------------
+//newPass.jsp
+<%@ page language="java" contentType="text/html; charset=UTF-8"
+    pageEncoding="UTF-8"%>
+<%@ include file="header.jsp" %>
+
+<h2>비밀번호 재발급</h2>
+
+<div class="jcce">
+	<h4>비밀번호를 재발급할 계정의 ID와 Email을 입력하여 인증을 진행해주세요</h4>
+</div>
+
+<div class="jcce">
+	<form method="POST">
+		<p><input type="text" name="userid" placeholder="ID" required autofocus></p>
+		<p><input type="email" name="email" placeholder="foo@bar.com" required></p>
+		<p><input class="btn" type="submit" value="재발급신청"></p>
+	</form>
+</div>
+
+</body>
+</html>
+------------------------
+//memberList.jsp
+<%@ page language="java" contentType="text/html; charset=UTF-8"
+    pageEncoding="UTF-8"%>
+<%@ include file="header.jsp" %>
+
+<h2>회원 목록</h2>
+<hr>
+
+<table border="1" cellpadding="7" cellspacing="0">
+	<tr>
+		<th>userid</th>
+		<th>userpw</th>
+		<th>username</th>
+		<th>email</th>
+		<th>gender</th>
+	</tr>
+	<c:forEach var="member" items="${list }">
+	<tr>
+		<td>${member.userid }</td>
+		<td>${member.userpw }</td>
+		<td>${member.username }</td>
+		<td>${member.email }</td>
+		<td>${member.gender }</td>
+	</tr>
+	</c:forEach>
+</table>
+
+</body>
+</html>
+-----------------------
+//bookList.jsp
+<%@ page language="java" contentType="text/html; charset=UTF-8"
+    pageEncoding="UTF-8"%>
+<%@ include file="header.jsp" %>
+
+<h2>도서 목록</h2>
+
+<div class="jcsb" style="margin: 20px 0; max-width: 1550px;">
+	<div>
+		<form>
+			<select name="column">
+				<option value="idx" ${param.column eq 'idx' ? 'selected' : '' }>도서 번호로 검색</option>
+				<option value="name" ${param.column eq 'name' ? 'selected' : '' }>도서명으로 검색</option>
+				<option value="author" ${param.column eq 'author' ? 'selected' : '' }>저자명으로 검색</option>
+			</select>
+			<input type="search" name="search" placeholder="검색어를 입력하세요" value="${param.search }">
+			<input type="submit" value="검색">
+		</form>
+	</div>
+	
+	<div style="margin: 0 10px;">
+		<a href="${cpath }/addBook"><button>추가</button></a>
+	</div>
+</div>
+
+<table border="1" cellpadding="7" cellspacing="0">
+	<tr>
+		<th><a class="btn" href="${cpath }/bookList/idx">IDX</a></th>
+		<th><a class="btn" href="${cpath }/bookList/name">NAME</a></th>
+		<th><a class="btn" href="${cpath }/bookList/author">AUTHOR</a></th>
+		<th><a class="btn" href="${cpath }/bookList/publisher">PUBLISHER</a></th>
+		<th><a class="btn" href="${cpath }/bookList/publishDate">PUBLISHDATE</a></th>
+		<th><a class="btn" href="${cpath }/bookList/price">PRICE</a></th>
+		<th><a class="btn" href="${cpath }/bookList/description">DESCRIPTION</a></th>
+		<th>수정</th>
+		<th>삭제</th>
+	</tr>
+	<c:forEach var="dto" items="${list }">
+	<tr>
+		<td>${dto.idx }</td>
+		<td>${dto.name }</td>
+		<td>${dto.author }</td>
+		<td>${dto.publisher }</td>
+		<td>${dto.publishDate }</td>
+		<td>${dto.price }</td>
+		<td>${dto.description }</td>
+		<td><button class="modifyBtn" data-idx="${dto.idx }">수정</button></td>
+		<td><button class="deleteBtn" data-idx="${dto.idx }">삭제</button></td>
+	</tr>
+	</c:forEach>
+</table>
+
+<script>
+	const cpath = '${cpath}'
+	const modifyBtnList = document.querySelectorAll('.modifyBtn')
+	const deleteBtnList = document.querySelectorAll('.deleteBtn')
+	
+	// 삭제 버튼을 클릭하면 실행되는 함수를 작성
+	deleteBtnList.forEach(function(btn) {	// 리스트 내부의 각각의 버튼을 btn이라고 할때
+		btn.onclick = function(event) {		// btn을 클릭하면 실행되는 이벤트 함수의 내용
+			const idx = event.target.dataset.idx	// 태그에서 data-idx 속성을 불러와서 변수에 저장
+			if(confirm('정말 ' + idx + '번 도서를 삭제하시겠습니까?')) {		// 사용자가 확인을 클릭하면
+				location.href = cpath + '/' + 'deleteBook/' + idx 	// 삭제 페이지로 이동
+			}
+		}
+	})
+	
+	// 수정 버튼을 클릭하면 실행되는 함수를 작성
+	for(let i = 0; i < modifyBtnList.length; i++) {
+		const btn = modifyBtnList[i]
+		btn.onclick = function(event) {
+			const idx = event.target.dataset.idx
+			location.href = cpath + '/' + 'modifyBook/' + idx 	
+		}
+	}
+	
+</script>
+
+</body>
+</html>
+--------------------------
+//addBook.jsp
+<%@ page language="java" contentType="text/html; charset=UTF-8"
+    pageEncoding="UTF-8"%>
+<%@ include file="header.jsp" %>
+
+<h2>도서 추가</h2>
+
+<form method="POST">
+	<p><input type="text" name="name" placeholder="도서명" required autofocus></p>
+	<p><input type="text" name="author" placeholder="저자명" required></p>
+	<p><input type="text" name="publisher" placeholder="출판사" required></p>
+	<p><input type="date" name="publishDate" required></p>
+	<p><input type="number" step="100" name="price" placeholder="가격" required></p>
+	<p>
+		<textarea name="description" placeholder="도서 설명" required></textarea>
+	</p>
+	<p><input type="submit" value="추가"></p>
+</form>	
+
+<script>
+	const today = new Date().toISOString().split('T')[0]
+	console.log(today)
+	
+	document.querySelector('input[type="date"]').value = today
+</script>
+
+</body>
+</html>
+----------------------
+//modifyBook.jsp
+<%@ page language="java" contentType="text/html; charset=UTF-8"
+    pageEncoding="UTF-8"%>
+<%@ include file="header.jsp" %>
+
+<h2>도서 정보 수정 : ${dto.idx }번 도서</h2>
+
+<form method="POST">
+	<p><input type="text" name="name" value="${dto.name }" required autofocus></p>
+	<p><input type="text" name="author" value="${dto.author }" required></p>
+	<p><input type="text" name="publisher" value="${dto.publisher }" required></p>
+	<p><input type="date" name="publishDate" value="${dto.publishDate }" required></p>
+	<p><input type="number" step="100" name="price" value="${dto.price }" required></p>
+	<p>
+		<textarea name="description" required>${dto.description }</textarea>
+	</p>
+	<p><input type="submit" value="수정"></p>
+</form>	
+
+</body>
+</html>
+===================================================================
 
 package myServlet;
 
