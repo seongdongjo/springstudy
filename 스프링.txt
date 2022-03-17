@@ -4917,8 +4917,8 @@ public interface BookDAO {
 	const url = '${url}'
 	const alert = document.getElementById('alert')
 	
-	const clientWidth = document.body.clientWidth
-	const alertWidth = alert.clientWidth
+	const clientWidth = document.body.clientWidth   //clientWidth는 margin을 제외한 padding,border,content까지 포함한 크기
+	const alertWidth = alert.clientWidth 
 	const left = (clientWidth / 2) - (alertWidth / 2)
 	
 	window.onload = function(event) {
