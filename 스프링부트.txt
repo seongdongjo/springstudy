@@ -1,0 +1,193 @@
+객체 지향 특성 - 추상화, 상속, 은닉, 재사용, 인터페이스 등
+
+1. 캡슐화 : 객체의 속성을 보호하기위해사용 - getter,setter, crud메서드 등
+- 장점 : 실제로 method가 어떻게 동작하는지 외부에서는 이해할 필요가없다. 
+       재사용성 향상
+	   유지보수 향상(하나의 객체안의 속성을 바꿔도 다른곳에는 영향x)
+       무결성(변수는 private, 함수는 public)
+2. 상속
+- 최상위 클래스만 보고 하위클래스들이 어떤한 속성을 가지는지 확인 가능
+- 재사용성 향상(상속받아서 사용)
+- 유지보수 향상
+
+3. 다형성(오버라이딩을 통해 알아서 찾아간다.)
+4. 추상화(객체지향에서의 추상화는 모델링이다)
+
+----------
+객체지향설계 5원칙(SOLID)
+
+결합도는 낮추고 응집도는 높여야한다.
+결합도는 클래스간의 상호의존정도를 나타내는지표이다.
+결합도가 낮으면 모듈(클래스)간의 상호의존성이 줄어들어서 객체 재사용 및 유지보수가 유리하다.
+
+응집도는 모듈내부에서 구성요소들의 기능관련적으로 응집도가 높아야한다.
+
+1. SRP(단일책임원칙)
+//객체지향, 다형성 적용안시킬때
+//이렇게 하면 유닛이 늘어나면 계속 else if써야되고 혹시나 잘못설정하면 move전체 메서드에 영향을 주게 된다.(단일책임)
+class Unit {
+	private String name,
+	private int speed,
+	
+	public void attack() {
+	}
+	
+	public void move() {
+		if(name.equals("저글링")) {
+			speed += 3
+		}else if(name.equals("탱크")) {
+			if("탱크모드") {
+				speed = 0
+			}else {
+				speed = 10
+			}
+		}
+	}
+}
+
+-----------------
+//올바른 예 -> 각 기능을 분리함
+class 저글링 extends Unit {
+	public void move() {
+		this.speed += 3
+	}
+}
+
+class 탱크 extends Unit {
+	public void move() {
+		if("탱크모드") {
+		
+		}else {
+		
+		}
+	}
+}
+
+class 정찰기 extends Unit {
+	public void 정찰기() {
+		this.충돌 = false;
+	}
+	public void move() {
+		speed = 15
+	}
+}
+===========================================================
+2. OCP(개방폐쇄원칙)
+- 자신의 확장에는 열려있고, 주변의 변화에 대해서는 닫혀있어야한다.(jdbc)
+가운데에 jdbc인터페이스를 두고 바깥에는 oracle, mysql, h2, mariadb 등으로 확장가능
+
+3. LSP(리스코프치환원칙)
+- 서브타입은 언제나 자신의 기반(상위)타입으로 교체할 수있어야한다.
+
+//LSP 위반 예시
+       아반떼
+	  /   \
+    소나타  그렌저
+
+//LSP 적용 예시
+	   공중유닛/비행기
+	  /         \
+	정찰기		   수송기
+
+4. ISP(인터페이스 분리원칙)
+-프로젝트 요구사항과 설계에 따라서 SRP, ISP를 선택한다.
+예) 지도에는 도보안내, 자동차안내, 바이크안내 등등의 메서드가 있는데 자전거내비는 자전거길안내메서드만 있으면 되는데 그거 하나 쓰겠다고 지도를 상속받으면 필요없는 메서드까지 사용하게될수있다.
+그래서, 각 인터페이스를 만들고(자동차길안내, 자전거길안내 등) 자전거내비는 자전거길안내만 할수있게끔 하는게 인터페이스 분리원칙이다.  
+
+5. DIP(의존역전원칙)
+===============================================================
+POJO JAVA
+- 순수한 자바 오브젝트를 뜻한다.
+1. 특정 규약에 종속되지 않는다.
+특정 라이브러리, 모듈에서 정의된 클래스를 상속받아서 구현하지 않아도 된다.
+POJO가 되기 위해서는 외부의 의존성을 두지않고, 순수한 JAVA로 구성이 가능해야한다.
+
+2. 특정 환경에 종속되지 않는다.
+http request, session 등 POJO를 위배한것으로 간주
+@Annotation 기반으로 설정하는 부분도 엄연히 POJO 라고 볼수는 없다.
+
+POJO Framework
+- spring, Hibernate
+POJO를 지향하는 프레임워크이다.
+개발자가 서비스 로직에 집중하고 이를 POJO로 쉽게 개발할수있도록 지원하고있다.
+
+====================================================================
+//디자인패턴
+자주 사용하는 설계 패턴을 정형화해서 이를 유형별로 가장 최적의 방법으로 개발을 할 수 있도록 정해둔 설계
+-싱글톤패턴
+하나의 프린터를 연결할 때(동일한 객체를 얻는다)
+package com.company.singleton;
+
+public class AClazz {
+    private SocketClient socketClient;
+
+    public AClazz() {
+        this.socketClient = SocketClient.getInstance();
+        //this.socketClient = new SocketClient(); 이렇게하면 새로운객체만듬
+    }
+    public SocketClient getSocketClient() {
+        return this.socketClient;
+    }
+}
+--------------
+package com.company.singleton;
+
+public class BClazz {
+    private SocketClient socketClient;
+
+    public BClazz() {
+        this.socketClient = SocketClient.getInstance();
+    }
+    public SocketClient getSocketClient() {
+        return this.socketClient;
+    }
+---------------
+package com.company.singleton;
+
+public class SocketClient {
+    private static SocketClient socketClient = null;
+
+    //public socketClient() { 이렇게 새로 객체를 만들면 서로 객체가다르다 AClazz참조
+    //}
+    private SocketClient() { //기본생성자 막고
+
+    }
+
+    public static SocketClient getInstance() { //최초에 한번만 생성
+        if(socketClient == null) {
+            socketClient = new SocketClient();
+        }
+        return socketClient;
+    }
+
+    public void connect() {
+        System.out.println("connect");
+    }
+------------------
+package com.company;
+
+import com.company.adapter.*;
+import com.company.singleton.AClazz;
+import com.company.singleton.BClazz;
+import com.company.singleton.SocketClient;
+
+public class Main {
+
+    public static void main(String[] args) {
+        AClazz aClazz = new AClazz();
+        BClazz bClazz = new BClazz();
+
+        SocketClient aClient = aClazz.getSocketClient();
+        SocketClient bClient = bClazz.getSocketClient();
+
+        System.out.println("두개의 객체가 동일한가");
+        System.out.println(aClient.equals(bClient));
+
+    }
+
+}
+====================================================================================
+-어댑터 패턴
+호환성이 없는 기존 클래스의 인터페이스를 변환하여 재사용 할 수 있도록 한다.
+OCP(개방퍠쇄원칙)을 따른다.
+
