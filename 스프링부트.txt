@@ -601,3 +601,401 @@ public class Main {
     }
 }
 ============================================================================
+//퍼싸드 패턴
+	client
+/  		|     \
+ftp writer reader
+
+이거를
+
+	  client
+	    |
+	  facade
+/  		|     \
+ftp writer reader
+
+
+//퍼싸드 적용 전 예시
+package com.company.facade;
+
+public class Ftp {
+    private String host;
+    private int port;
+    private String path;
+
+    public Ftp(String host, int port, String path) {
+        this.host = host;
+        this.port = port;
+        this.path = path;
+    }
+    public void connect() {
+        System.out.println("FTP Host: " + host + "Port : " +port+ "로 연결합니다.");
+    }
+    public void moveDirectory() {
+        System.out.println("FTP path: " + path+"로 이동합니다.");
+    }
+    public void dicConnect() {
+        System.out.println("FTP 연결을 종료합니다.");
+    }
+}
+
+-----------------
+package com.company.facade;
+
+public class Writer { //파일쓰기
+    private String fileName;
+    
+    public Writer(String fileName) {
+        this.fileName = fileName;
+    }
+    
+    public void fileConnect() { //파일 생성또는 이어쓰기
+        String msg = String.format("Writer %s로 연결합니다.",fileName);
+        System.out.println(msg);
+    }
+    
+    public void fileDisconnect() {
+        String msg = String.format("Writer %s로 연결 종료합니다.",fileName);
+        System.out.println(msg);
+    }
+    
+    public void write() {
+        String msg = String.format("Writer %s로 파일쓰기를 합니다.",fileName);
+        System.out.println(msg);
+    }
+}
+--------------------
+package com.company.facade;
+
+public class Reader { //파일에서 읽어오기때문에 파일이름을 알아야한다.
+    private String fileName;
+
+    public Reader(String fileName) {
+        this.fileName = fileName;
+    }
+
+    public void fileConnect() {
+        String msg = String.format("Reader %s로 연결합니다.",fileName);
+        System.out.println(msg);
+    }
+
+    public void fileRead() {
+        String msg = String.format("Reader %s의 내용을 읽어옵니다.",fileName);
+        System.out.println(msg);
+    }
+
+    public void fileDisconnect() {
+        String msg = String.format("Reader %s로 연결 종료합니다.",fileName);
+        System.out.println(msg);
+    }
+}
+----------------------
+package com.company;
+
+import com.company.adapter.*;
+import com.company.aop.AopBrowser;
+import com.company.decorator.*;
+import com.company.facade.Ftp;
+import com.company.facade.Reader;
+import com.company.facade.Writer;
+import com.company.observer.Button;
+import com.company.observer.IButtonListener;
+import com.company.proxy.Browser;
+import com.company.proxy.BrowserProxy;
+import com.company.proxy.IBrowser;
+import com.company.singleton.AClazz;
+import com.company.singleton.BClazz;
+import com.company.singleton.SocketClient;
+
+import java.util.concurrent.atomic.AtomicLong;
+
+public class Main {
+
+    public static void main(String[] args) {
+        Ftp ftpClient = new Ftp("www.foo.co.kr", 22, "/home/etc");
+        ftpClient.connect();
+        ftpClient.moveDirectory();
+
+        Writer writer = new Writer("text.tmp");
+        writer.fileConnect();
+        writer.write();
+
+        Reader reader = new Reader("text.tmp");
+        reader.fileConnect();
+        reader.fileRead();
+
+        reader.fileDisconnect();
+        writer.fileDisconnect();
+        ftpClient.dicConnect();
+    }
+}
+===============================================================================
+//퍼싸드 적용 후 예시
+package com.company.facade;
+
+public class Ftp {
+    private String host;
+    private int port;
+    private String path;
+
+    public Ftp(String host, int port, String path) {
+        this.host = host;
+        this.port = port;
+        this.path = path;
+    }
+    public void connect() {
+        System.out.println("FTP Host: " + host + "Port : " +port+ "로 연결합니다.");
+    }
+    public void moveDirectory() {
+        System.out.println("FTP path: " + path+"로 이동합니다.");
+    }
+    public void dicConnect() {
+        System.out.println("FTP 연결을 종료합니다.");
+    }
+}
+
+-----------------
+package com.company.facade;
+
+public class Writer { //파일쓰기
+    private String fileName;
+    
+    public Writer(String fileName) {
+        this.fileName = fileName;
+    }
+    
+    public void fileConnect() { //파일 생성또는 이어쓰기
+        String msg = String.format("Writer %s로 연결합니다.",fileName);
+        System.out.println(msg);
+    }
+    
+    public void fileDisconnect() {
+        String msg = String.format("Writer %s로 연결 종료합니다.",fileName);
+        System.out.println(msg);
+    }
+    
+    public void write() {
+        String msg = String.format("Writer %s로 파일쓰기를 합니다.",fileName);
+        System.out.println(msg);
+    }
+}
+--------------------
+package com.company.facade;
+
+public class Reader { //파일에서 읽어오기때문에 파일이름을 알아야한다.
+    private String fileName;
+
+    public Reader(String fileName) {
+        this.fileName = fileName;
+    }
+
+    public void fileConnect() {
+        String msg = String.format("Reader %s로 연결합니다.",fileName);
+        System.out.println(msg);
+    }
+
+    public void fileRead() {
+        String msg = String.format("Reader %s의 내용을 읽어옵니다.",fileName);
+        System.out.println(msg);
+    }
+
+    public void fileDisconnect() {
+        String msg = String.format("Reader %s로 연결 종료합니다.",fileName);
+        System.out.println(msg);
+    }
+}
+----------------------
+package com.company.facade;
+
+public class SftpClient {
+    private Ftp ftp;
+    private Reader reader;
+    private Writer writer;
+
+    public SftpClient(Ftp ftp, Reader reader, Writer writer) { //두가지방법
+        this.ftp = ftp;
+        this.reader = reader;
+        this.writer = writer;
+    }
+    //오버로딩
+    public SftpClient(String host, int port, String path, String fileName) {
+        this.ftp = new Ftp(host,port,path);
+        this.reader = new Reader(fileName);
+        this.writer = new Writer(fileName);
+    }
+
+    public void connect() {
+        ftp.connect();
+        ftp.moveDirectory();
+        writer.fileConnect();
+        reader.fileConnect();
+    }
+    public void disConnect() {
+        writer.fileDisconnect();
+        reader.fileDisconnect();
+        ftp.dicConnect();
+    }
+
+    public void read() {
+        reader.fileRead();
+    }
+    public void write() {
+        writer.write();
+    }
+}
+------------------------
+package com.company;
+
+import com.company.adapter.*;
+import com.company.aop.AopBrowser;
+import com.company.decorator.*;
+import com.company.facade.Ftp;
+import com.company.facade.Reader;
+import com.company.facade.Writer;
+import com.company.observer.Button;
+import com.company.observer.IButtonListener;
+import com.company.proxy.Browser;
+import com.company.proxy.BrowserProxy;
+import com.company.proxy.IBrowser;
+import com.company.singleton.AClazz;
+import com.company.singleton.BClazz;
+import com.company.singleton.SocketClient;
+
+import java.util.concurrent.atomic.AtomicLong;
+
+public class Main {
+
+    public static void main(String[] args) {
+        Ftp ftpClient = new Ftp("www.foo.co.kr", 22, "/home/etc");
+        ftpClient.connect();
+        ftpClient.moveDirectory();
+
+        Writer writer = new Writer("text.tmp");
+        writer.fileConnect();
+        writer.write();
+
+        Reader reader = new Reader("text.tmp");
+        reader.fileConnect();
+        reader.fileRead();
+
+        reader.fileDisconnect();
+        writer.fileDisconnect();
+        ftpClient.dicConnect();
+		
+	   SftpClient sftpClient = new SftpClient("www.foo.co.kr", 22, "/home/etc", "text.tmp");
+       sftpClient.connect();
+       sftpClient.write();
+       sftpClient.read();
+       sftpClient.disConnect();
+       //객체들의 의존을 숨기는게 퍼싸드패턴이다.
+    }
+}
+===================================================================================
+//전략패턴
+유사한 행위들을 캡슐화하여, 객체의 행위를 바꾸고 싶은 경우 직접 변경하는 것이 아닌 전략만 변경하여, 유연하게 확장하는 패턴
+package com.company.strategy;
+
+public interface EncodingStrategy {
+    String encode(String text);
+}
+------------
+package com.company.strategy;
+
+public class AppendStrategy implements EncodingStrategy{
+
+    @Override
+    public String encode(String text) {
+        return "ABCD" + text; //abcd를 추가시키는
+    }
+}
+--------------
+package com.company.strategy;
+
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
+
+public class Base64Strategy implements EncodingStrategy{
+
+    @Override
+    public String encode(String text) {
+        return Base64.getEncoder().encodeToString(text.getBytes()); //인코딩하기
+    }
+}
+---------------
+package com.company.strategy;
+
+public class Encoder { //그떄그때마다 전략을 받아야한다. 어떤 인코드를 쓸지
+    private EncodingStrategy encodingStrategy;
+
+    public String getMessage(String message) {
+        return this.encodingStrategy.encode(message);
+    }
+
+    public void setEncodingStrategy(EncodingStrategy encodingStrategy) {
+        this.encodingStrategy = encodingStrategy;
+    }
+}
+-----------------
+package com.company.strategy;
+
+public class NormalStrategy implements EncodingStrategy{
+    @Override
+    public String encode(String text) {
+        return text;
+    }
+}
+----------------
+package com.company;
+
+import com.company.adapter.*;
+import com.company.aop.AopBrowser;
+import com.company.decorator.*;
+import com.company.facade.Ftp;
+import com.company.facade.Reader;
+import com.company.facade.SftpClient;
+import com.company.facade.Writer;
+import com.company.observer.Button;
+import com.company.observer.IButtonListener;
+import com.company.proxy.Browser;
+import com.company.proxy.BrowserProxy;
+import com.company.proxy.IBrowser;
+import com.company.singleton.AClazz;
+import com.company.singleton.BClazz;
+import com.company.singleton.SocketClient;
+import com.company.strategy.*;
+
+import java.util.concurrent.atomic.AtomicLong;
+
+public class Main {
+
+    public static void main(String[] args) {
+
+
+        //전략 메서드를 가진 전략객체(NormalStrategy, Base64Strategy)
+        //전략 객체를 사용하는 컨텍스트(Encoder)
+        //전략 객체를 생성해 컨텍스트에 주입하는 클라이언트(main)
+
+        Encoder encoder = new Encoder();
+
+        //base64전략 생성
+        EncodingStrategy base64 = new Base64Strategy();
+
+        //normal전략생성
+        EncodingStrategy normal = new NormalStrategy();
+
+        String message = "hello java";
+        //전략수정(원본객체는 그대로 두고)
+        encoder.setEncodingStrategy(base64);
+        String base64Result = encoder.getMessage(message);
+        System.out.println(base64Result); //출력: aGVsbG8gamF2YQ==
+
+        encoder.setEncodingStrategy(normal);
+        String normalResult = encoder.getMessage(message);
+        System.out.println(normalResult); //출력: hello java
+
+        encoder.setEncodingStrategy(new AppendStrategy());
+        String appendResult = encoder.getMessage(message);
+        System.out.println(appendResult); //출력: ABCDhello java
+    }
+}
+=========================================================================
