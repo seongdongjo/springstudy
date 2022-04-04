@@ -75,7 +75,118 @@ class 정찰기 extends Unit {
 2. OCP(개방폐쇄원칙)
 - 자신의 확장에는 열려있고, 주변의 변화에 대해서는 닫혀있어야한다.(jdbc)
 가운데에 jdbc인터페이스를 두고 바깥에는 oracle, mysql, h2, mariadb 등으로 확장가능
+- 예를들어, java프로그램은 어떤 운영체제에서도 JVM을 통해 동일하게 실행된다.(java는 OS에 개방적이다)
+- 다르게 표현하면, java프로그램언어는 운영체제가 변경되더라도 영향을 받지 않는다.
+(java는 OS변경에 영향을 받지않는다. OS변경에 닫혀있다)
 
+- 또 예를들어, Jdbc는 데이터 커넥션 부분만 변경하면, 어떤 dB에서도 동일하게 사용할 수 있다.(JDBC는 db에 개방적이다)
+- 다르게 표현하면, jdbc는 db가 중간에 변경되더라도 영향을 받지 않게 설계되어 있다.
+(jdbc는 db의 변경에 닫혀있다)
+
+- 또 예를들어, 나는 자동차 운전을 할 수 있다. 소나타, 그랜저, bmw 등
+(나는 자동차 운전에 개방적이다)
+- 다르게 표현하면, 나는 자동차가 바뀌더라도 영향을 받지 않는다.
+- 즉 자동차가 바뀌더라도 내가 운전하는 방식은 동일해야한다.
+
+//잘못된 예
+운전자--- 소나타(method운전하다())
+운전자--- 그랜저(method운전하다())
+운전자--- BMW(method운전하다())
+
+//올바른 예
+운전자 ---- 자동차(method운전하다())
+           |
+		---|--------------
+		|  		 |    	 |
+	  소나타 		그랜저 	BMW
+    (override   (override)   
+  method운전하다()) 운전하다()
+
+//잘못된 예
+package book.oopforsprings.lec05.solid;
+
+public class OCP운전자_NO {
+
+	public static void main(String[] args) {
+		// TODO Auto-generated method stub
+		
+		소나타2 운전자 = new 소나타2();
+		  운전자.drive();
+		
+		그랜저2 운전자2 = new 그랜저2();
+		  운전자2.drive();
+		
+		BMW2 운전자3 = new BMW2();
+		  운전자3.drive();
+	}
+
+}
+
+class 소나타2{	
+	void drive() {
+		System.out.println("나는 소나타를 운전한다.");
+	}
+}
+
+class 그랜저2{	
+	void drive() {
+		System.out.println("나는 그랜저를 운전한다.");
+	}
+}
+
+class BMW2{	
+	void drive() {
+		System.out.println("나는 BMW를 운전한다.");
+	}
+}
+
+//올바른 예(확장이 쉽게)
+package book.oopforsprings.lec05.solid;
+
+public class OCP운전자_OK {
+
+	public static void main(String[] args) {
+		
+		자동차[] 운전자 = new 자동차[3];
+		
+		운전자[0] = new 소나타();
+		운전자[1] = new 그랜저();
+		운전자[2] = new BMW();
+		
+		for(int i=0; i<운전자.length; i++) {
+			운전자[i].drive();
+		}
+
+	}
+
+}
+
+class 자동차{
+	String myCar="자동차";
+	void drive() {
+		System.out.printf("나는 %s 를 운전할 수 있다. \n",  myCar);
+	}
+}
+
+class 소나타 extends 자동차{
+	public 소나타() {
+		myCar = "소나타";
+	}	
+}
+
+class 그랜저 extends 자동차{	
+	public 그랜저() {
+		myCar = "그랜저";
+	}
+}
+
+class BMW extends 자동차{	
+	public BMW() {
+		myCar = "BMW";
+	}
+}
+
+  
 3. LSP(리스코프치환원칙)
 - 서브타입은 언제나 자신의 기반(상위)타입으로 교체할 수있어야한다.
 
@@ -121,7 +232,7 @@ package com.company.singleton;
 public class AClazz {
     private SocketClient socketClient;
 
-    public AClazz() {
+    public AClazz() { //기본생성자
         this.socketClient = SocketClient.getInstance();
         //this.socketClient = new SocketClient(); 이렇게하면 새로운객체만듬
     }
@@ -135,7 +246,7 @@ package com.company.singleton;
 public class BClazz {
     private SocketClient socketClient;
 
-    public BClazz() {
+    public BClazz() { //기본생성자
         this.socketClient = SocketClient.getInstance();
     }
     public SocketClient getSocketClient() {
@@ -231,11 +342,11 @@ public class HairDryer implements Electronic110V{
 ---------------
 package com.company.adapter;
 
-public class SocketAdapter implements Electronic110V{
+public class SocketAdapter implements Electronic110V{ //110을 220으로 변환하는 어댑터
 
     private Electronic220V electronic220V;
 
-    public SocketAdapter(Electronic220V electronic220V) {
+    public SocketAdapter(Electronic220V electronic220V) { //생성자
         this.electronic220V = electronic220V;
     }
 
@@ -268,7 +379,7 @@ public class Main {
 
         AirConditioner airConditioner = new AirConditioner();
         Electronic110V airAdapter = new SocketAdapter(airConditioner);
-        connect(airAdapter);
+        connect(airAdapter); //에어컨 220V
         
     }
     //콘센트
@@ -291,7 +402,7 @@ package com.company.proxy;
 public class Html {
     private String url;
 
-    public Html(String url) {
+    public Html(String url) { //생성자
         this.url = url;
     }
 }
@@ -553,13 +664,13 @@ public class Button {
     private String name;
     private IButtonListener buttonListener;
 
-    public Button(String name) {
+    public Button(String name) { //1
         this.name = name;
     }
-    public void click(String message) {
+    public void click(String message) { //3
         buttonListener.clickEvent(message);
     }
-    public void addListener(IButtonListener buttonListener) {
+    public void addListener(IButtonListener buttonListener) { //2
         this.buttonListener = buttonListener;
     }
 }
@@ -925,7 +1036,7 @@ public class Base64Strategy implements EncodingStrategy{
 package com.company.strategy;
 
 public class Encoder { //그떄그때마다 전략을 받아야한다. 어떤 인코드를 쓸지
-    private EncodingStrategy encodingStrategy;
+    private EncodingStrategy encodingStrategy; //인터페이스
 
     public String getMessage(String message) {
         return this.encodingStrategy.encode(message);
