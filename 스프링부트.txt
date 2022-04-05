@@ -1566,5 +1566,175 @@ public class PutApiController {
     }
 }
 ==================================================================================================
+//delete메서드 멱등하다.(데이터가 없어도 ok를 리턴(200) 에러안띄운다) 안정성은 가지고있지 않다. 보통 인덱스, 또는 유니크한값을 기준으로 지운다.
+//http://localhost:8080/api/delete/100?account=user01
+
+package com.example.delete.controller;
+
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/api")
+public class DeleteApiController {
+    @DeleteMapping("/delete/{userId}")
+    public void delete(@PathVariable String userId, @RequestParam String account) {
+        System.out.println(userId);
+        System.out.println(account);
+    }
+}
+=================================================================================================
+//Response 내려주기
+package com.example.response.dto;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+//일괄적으로 스네이크케이스 적용 시 @JsonNaming(value=PropertyNamingStrategy.SnakeCaseStrategy.class)
+//response로 응답을 줄 때 phone_number로 주게된다.
+//단, 보낼 때도 json body에 phone_number로 보내줘야한다.
+// { phone_number : "010-1111-1111" } 이렇게
+@JsonInclude(JsonInclude.Include.NON_NULL)
+public class User {
+    private String name;
+    private int age; //이렇게 primitive타입의 int는 값이 없으면 0 , wrapper클래스인 Integer로 하면 null이 된다. -> null값을 JSON으로 넘기고 싶지않을 때
+    //@JsonInclude를 쓴다. user.setName("steve");
+    //        user.setAddress("패스트 캠퍼스"); 이렇게 age에 값이 없으면 null이지만 response할 때 null값은 제외시키는게 @JsonInclude이다.
+//    {
+//        "name" : "steve",
+//        "address": "패스트 캠퍼스"
+//    } //이렇게 null값은 제외시키고 있는값만 json으로 response한다
+    private String phoneNumber;
+    private String address;
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public int getAge() {
+        return age;
+    }
+
+    public void setAge(int age) {
+        this.age = age;
+    }
+
+    public String getPhoneNumber() {
+        return phoneNumber;
+    }
+
+    public void setPhoneNumber(String phoneNumber) {
+        this.phoneNumber = phoneNumber;
+    }
+
+    public String getAddress() {
+        return address;
+    }
+
+    public void setAddress(String address) {
+        this.address = address;
+    }
+
+    @Override
+    public String toString() {
+        return "User{" +
+                "name='" + name + '\'' +
+                ", age=" + age +
+                ", phoneNumber='" + phoneNumber + '\'' +
+                ", address='" + address + '\'' +
+                '}';
+    }
+}
+---------------------
+package com.example.response.controller;
+
+import com.example.response.dto.User;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/api")
+public class ApiController {
+    @GetMapping("/text")
+    public String text(@RequestParam String account) {
+        return account; //일반 String으로 response
+    }
+
+    //Json으로 response
+    @PostMapping("/json")
+    public User json(@RequestBody User user) {
+        //Json body
+//        {
+//            "name":"steve",
+//                "age": 10,
+//                "phoneNumber" : "010-1111-2222",
+//                "address" : "패스트캠퍼스"
+//        }
+        return user; //json으로 위에 처럼 응답을 준다.
+        //request가 오게되면 -> object mapper로 인해서 -> object로 바뀌고 -> postmapping -> object로 받고 -> object mapper -> json -> response
+    }
+
+    //특정 reponse로 내려주기
+    //put 으로 resource가 생성됐을 때 201 response 할것이다.
+    //수정됐을 떄는 200
+    @PutMapping("/put")
+    public ResponseEntity<User> put(@RequestBody User user) { //ResponseEntitiy를 통해 header값도 추가가능, 응답에 대해 커스텀마이징도 가능
+        return ResponseEntity.status(HttpStatus.CREATED).body(user); //마찬가지로 json으로 매핑되서 response된다.
+    }
+    //크롬에 put , http://localhost:8080/api/put 하고 body에 위에 json body를 넣으면 201로 response가 뜬다.
+
+
+}
+-------------------
+package com.example.response.controller;
+
+import com.example.response.dto.User;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+@Controller //애는 html같은 리소스를 찾는다. @RestController는 API를 만들 때 , @Controller는 페이지를 리턴할 때
+//그렇다면 @Controller에서는 json을 어떻게 보냄?? -> ResponseBody
+public class PageController {
+    @RequestMapping("/main")
+    //@Controller라는 어노테이션은 String을 return하게되면 리소스를 찾지만 @ResponseBody를 붙이면 말그대로 body를 만들어서 response하겠다라는 의미이다.
+    public String main() {
+        return "main.html"; //http://localhost:8080/main
+    }
+
+    @ResponseBody
+    @GetMapping("/user")
+    public User user() {
+        //기존
+        //User user = new User();
+
+        //자바 11에서의 타입추론
+        var user = new User();
+        user.setName("steve");
+        user.setAddress("패스트 캠퍼스");
+        return user; //json으로 응답
+        // http://localhost:8080/user
+    }
+
+}
+------------------
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+Main html입니다.
+</body>
+</html>
+==================================================================================================
+
 
 
