@@ -1300,3 +1300,271 @@ public class UserRequest {
     }
 }
 ==================================================================================
+//JSON구조
+string : value,
+number : value,
+boolean : value,
+object: value,
+array : value []
+{
+	"key" : "value"
+}
+
+// '_' 이거를 스네이크케이스라고한다. phone_number
+
+{
+	"phone_number" : "value",
+	"phoneNumber" : "010-1111-1111",
+	"age": 10,
+	"isAgree": false,
+	"account" : {
+		"email": "steve@email.com",
+		"password": "1234",
+	}
+}
+
+//user 조회하는 경우
+{
+	"account": "abcd",
+	"password": "1234",
+}
+
+//배열은 같은 값의 반복이다.
+{
+	"user_list": [
+		{
+			"account": "abcd",
+			"password": "1234",
+		},
+		{
+			"account": "aaaa",
+			"password" : "1111",
+		}
+	]
+}
+
+=============================================================================
+package com.example.post.dto;
+
+public class PostRequestDto {
+    private String account;
+    private String email;
+    private String address;
+    private String password;
+    //기본은 카멜케이스이다. 
+    private String phoneNumber; //phone_number
+    //크롬에서 Talend로 테스트할 때 body에 "phone_number" : "010-1111-1111" 이렇게 해서 보내면 폰넘버에서 null이 뜬다.
+    //그러면 매핑할려면?? 일일이 변수에다가 해야하는 귀찮음이 있긴하지만
+    //실제로 들어오는 이름값을 매핑시켜준다. "phone_number" : "010-1111-1111" -> phoneNumber로 매핑시켜줌
+    //@JsonProperty("phone_number") phone_number로 오면 phoneNumber로 매핑해줘라
+    //private String phoneNumber;
+
+    //@JsonProperty("OTP") 스네이크케이스, 카멜케이스도 아닌경우에는 이렇게
+    //private String OTP;
+
+    public String getAccount() {
+        return account;
+    }
+
+    public void setAccount(String account) {
+        this.account = account;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public String getAddress() {
+        return address;
+    }
+
+    public void setAddress(String address) {
+        this.address = address;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
+    }
+
+    public String getPhoneNumber() {
+        return phoneNumber;
+    }
+
+    public void setPhoneNumber(String phoneNumber) {
+        this.phoneNumber = phoneNumber;
+    }
+
+    @Override
+    public String toString() {
+        return "PostRequestDto{" +
+                "account='" + account + '\'' +
+                ", email='" + email + '\'' +
+                ", address='" + address + '\'' +
+                ", password='" + password + '\'' +
+                ", phoneNumber='" + phoneNumber + '\'' +
+                '}';
+    }
+}
+--------------------
+package com.example.post.controller;
+
+import com.example.post.dto.PostRequestDto;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.Map;
+
+@RestController
+@RequestMapping("/api")
+public class PostApiController {
+    @PostMapping("/post")
+    public void post(@RequestBody Map<String, Object> requestData) {
+        requestData.entrySet().forEach(soentry -> {
+            System.out.println(("key: " +soentry.getKey()));
+            System.out.println(("value: " +soentry.getValue()));
+        });
+    }
+
+    @PostMapping("/post1")
+    public void post1(@RequestBody PostRequestDto requestData) {
+       System.out.println(requestData);
+    }
+}
+=========================================================================================
+//put은 멱등성인데 첨에 데이터가 없으면 생성하고 있으면 업데이트를 한다.
+//안정성은 가지고있지않다. 왜냐하면 안정하지않은 데이터가 들어가도 업데이트 하기 떄문에.
+package com.example.put.dto;
+
+
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+public class CarDto {
+    private String name;
+    @JsonProperty("car_number")
+    private String carNumber;
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getCarNumber() {
+        return carNumber;
+    }
+
+    public void setCarNumber(String carNumber) {
+        this.carNumber = carNumber;
+    }
+
+    @Override
+    public String toString() {
+        return "CarDto{" +
+                "name='" + name + '\'' +
+                ", carNumber='" + carNumber + '\'' +
+                '}';
+    }
+}
+-----------------
+package com.example.put.dto;
+
+import com.fasterxml.jackson.databind.PropertyNamingStrategy;
+import com.fasterxml.jackson.databind.annotation.JsonNaming;
+
+import java.util.List;
+
+@JsonNaming(value = PropertyNamingStrategy.SnakeCaseStrategy.class)
+public class PostRequestDto {
+    private String name;
+    private int age;
+    private List<CarDto> carList;
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public int getAge() {
+        return age;
+    }
+
+    public void setAge(int age) {
+        this.age = age;
+    }
+
+    public List<CarDto> getCarList() {
+        return carList;
+    }
+
+    public void setCarList(List<CarDto> carList) {
+        this.carList = carList;
+    }
+
+    @Override
+    public String toString() {
+        return "PostRequestDto{" +
+                "name='" + name + '\'' +
+                ", age=" + age +
+                ", carList=" + carList +
+                '}';
+    }
+}
+--------------------
+package com.example.put;
+
+import com.example.put.dto.PostRequestDto;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/api")
+public class PutApiController {
+    @PutMapping("/put")
+    public PostRequestDto put(@RequestBody PostRequestDto requestDto) {
+        //Json 디자인
+//        {
+//            "name" : "steve",
+//            "age" : 10,
+//            "car_list" : [
+//                {
+//                    "name" : "BMW",
+//                    "car_number" : "11가 1234"
+//                },
+//                {
+//                    "name" : "Audi",
+//                    "car_number" : "11가 2222"
+//                }
+//            ]
+//        }
+        System.out.println(requestDto); //크롬에서 put으로 해서 http://localhost:8080/api/put, body에 json디자인한걸 넣으면
+        //하지만 carList=null이라고 뜬다. 왜냐하면 dto에는 catList로 했지만 body에는 car_list로 스네이크케이스로 했기떄문에
+        //클래스에 대해 전체적으로 같은 룰을 적용시킬때는 (물론, jsonproperty해도 되지만) @JsonNaming을 쓴다.(PostRequestDto, CarDto)
+
+        return requestDto; //받은 json body를 그대로 넘겨준다.
+        //즉, "name" :requestDto.getName() 이렇게 할필요없이 스프링부트에서는 dto에 매핑해서 json형태로 response해준다.
+
+        //PathVariable 테스트
+//        @PutMapping("/put/{userId}")
+//        public PostRequestDto put(@RequestBody PostRequestDto requestDto, @PathVariable Long userId) {
+//            System.out.println(userId);
+//            http://localhost:8080/api/put/100, body에 json넣고 send하면 콘솔에 찍힌다.
+//        }
+    }
+}
+==================================================================================================
+
+
