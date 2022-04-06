@@ -1781,6 +1781,7 @@ public class User {
     }
 }
 ---------------
+경로: test/java
 package com.example.objectmapper;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -1823,6 +1824,193 @@ class ObjectMapperApplicationTests {
 
 }
 =========================================================================
+스프링은 여러가지 모듈이 있지만 그 중에서 스프링부트, 스프링클라우드, 스프링데이터, 스프링시큐리티에 중점
+스프링의 등장은 2000년대 초의 자바 EE애플리케이션은 작성/테스트가 매우 어려웠으며, 한번테스트하기가 번거러웠다.
+이로인해, 느슨한결합이 된 애플리케이션 개발이 힘든상태였으며, 특히 데이터베이스와 같이 외부에 의존성을 두는 경우 단위테스트가 불가능했다.
 
+IoC(inversion of Control) 제어의 역전
+- 스프링에서는 일반적으로 java객체를 new로 생성하여 개발자가 관리하는 것이아닌 spring Container에 모두 맡긴다.
+예를들어, 프린터라는 싱글톤객체를 이용하면 프린터라는 객체를 만든 후에 가져다 쓰는데 그러한 형태가 스프링에서는 없다
+스프링컨테이너라고 하는 공간에 생성하고자하는 객체가 이미 만들어져서 들어가있고 싱글톤의 형태로 관리가 된다.
+즉, 개발자가 객체를 관리하는 것이아니라 프레임워크한테 제어의 권한을 넘긴다. 즉, 모든 객체의 관리를 스프링컨테이너에서 관리한다. -> 제어의 역전(권한이 넘어갔음)
+
+DI(Dependency Injection)
+그럼 만들어진 객체를 어떻게 쓸까? -> DI
+- 외부로 부터 내가 사용할 객체를 주입을 받는다.
+- 주입을 해주는 애는 스프링컨테이너이다.
+그럼 DI를 왜쓰는가?
+1. 특정객체가 다른객체에 의존하고있는데 그런 부분을 코드로부터 격리시킨다. 코드테스트가 용이하다. 해당객체가 없어도 테스트 가능
+2. DI를 통하여, 불가능한 상황을 Mock와 같은 기술을 통하여, 안정적으로 테스트 가능하다.
+3. 코드를 확장하거나 변경할 때 영향을 최소화한다. 내가 쓰고자하는 객체는 주입을 받기 때문에 내코드가 변경되더라도 영향을 받지않는다.(추상화를 통해서)
+4. 순환첨조를 막을 수 있다.(내가 나를 참조한다던지, 내가 참조했는데 그 객체가 나를 참조하는 형태)
+
+===========================================================================
+//기존 코드 방식
+package com.company.ioc;
+
+public class Main {
+
+    public static void main(String[] args) {
+	    String url = "www.naver.com/books/it?page=10&size=20&name=spring-boot"; //인코딩할 url
+        //base64로 인코딩해주세요
+        Encoder encoder = new Encoder();
+        String result = encoder.encode(url);
+        System.out.println(result); //d3d3Lm5hdmVyLmNvbS9ib29rcy9pdD9wYWdlPTEwJnNpemU9MjAmbmFtZT1zcHJpbmctYm9vdA==
+		
+		//또 url 인코딩해주세요
+        //그러면 또 urlencoder만들어야겠네?
+        UrlEncoder urlEncoder = new UrlEncoder();
+        String urlResult = urlEncoder.encode(url);
+        System.out.println(urlResult); //www.naver.com%2Fbooks%2Fit%3Fpage%3D10%26size%3D20%26name%3Dspring-boot
+		
+		//이렇게 계속 만들것인가?? -> 인터페이스, di이용
+    }
+}
+----------------
+package com.company.ioc;
+
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
+
+public class UrlEncoder {
+    public String encode(String message) {
+        try {
+            return URLEncoder.encode(message, "UTF-8");
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+            return null; //예외가 났을 떄는 null리턴
+        }
+    }
+}
+---------------------
+package com.company.ioc;
+
+import java.util.Base64;
+
+public class Encoder {
+    public String encode(String message) {
+        return Base64.getEncoder().encodeToString(message.getBytes());
+    }
+}
+===============================================================================
+//인터페이스로 
+package com.company.ioc;
+
+public class Main {
+
+    public static void main(String[] args) {
+	    String url = "www.naver.com/books/it?page=10&size=20&name=spring-boot"; //인코딩할 url
+
+        //이렇게 해도 코드 변화가 크게없네? 만들떄마다 이렇게 해야돼?? -> 안에다 감추자 Encoder에 (지금은 적용안됌)
+        IEncoder encoder = new Base64Encoder();
+        String result = encoder.encode(url);
+
+        IEncoder urlEncoder = new UrlEncoder();
+        String urlResult = urlEncoder.encode(url);
+
+        System.out.println(urlResult);
+
+    }
+}
+------------------
+package com.company.ioc;
+
+public interface IEncoder {
+    String encode(String message);
+}
+------------------
+package com.company.ioc;
+
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
+
+public class UrlEncoder implements IEncoder{
+    public String encode(String message) {
+        try {
+            return URLEncoder.encode(message, "UTF-8");
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+            return null; //예외가 났을 떄는 null리턴
+        }
+    }
+}
+-----------------------
+package com.company.ioc;
+
+import java.util.Base64;
+
+public class Base64Encoder implements IEncoder{
+    public String encode(String message) {
+        return Base64.getEncoder().encodeToString(message.getBytes());
+    }
+}
+=============================================================================================
+//Encoder에 감추자 -> 코드는 줄어듬
+package com.company.ioc;
+
+public class Main {
+
+    public static void main(String[] args) {
+	    String url = "www.naver.com/books/it?page=10&size=20&name=spring-boot"; //인코딩할 url
+
+       Encoder encoder = new Encoder(); //이렇게 코드는 줄어들었지만 base64, urlEncoding할때마다 Encoder클래스를 건드려야한다. -> 비효율적
+       String result = encoder.encode(url);
+
+        System.out.println(result);
+
+    }
+}
+------------------
+package com.company.ioc;
+
+public interface IEncoder {
+    String encode(String message);
+}
+--------------------
+package com.company.ioc;
+
+import java.util.Base64;
+
+public class Base64Encoder implements IEncoder{
+    public String encode(String message) {
+        return Base64.getEncoder().encodeToString(message.getBytes());
+    }
+}
+---------------------
+package com.company.ioc;
+
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
+
+public class UrlEncoder implements IEncoder{
+    public String encode(String message) {
+        try {
+            return URLEncoder.encode(message, "UTF-8");
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+            return null; //예외가 났을 떄는 null리턴
+        }
+    }
+}
+--------------------------
+package com.company.ioc;
+
+import java.util.Base64;
+
+public class Encoder {
+    private IEncoder iEncoder;
+
+    public Encoder() {
+        this.iEncoder = new Base64Encoder();
+        //this.iEncoder = new UrlEncoder();
+    }
+
+    public String encode(String message)
+    {
+        return iEncoder.encode(message);
+    }
+}
+====================================================================
+//DI 이용
 
 
