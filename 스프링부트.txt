@@ -2012,5 +2012,316 @@ public class Encoder {
 }
 ====================================================================
 //DI 이용
+package com.company.ioc;
+
+public class Main {
+
+    public static void main(String[] args) {
+	    String url = "www.naver.com/books/it?page=10&size=20&name=spring-boot"; //인코딩할 url
+
+        //주입객체만 바꾼다.
+        //Encoder를 건드릴 필요는 없다.
+        Encoder encoder = new Encoder(new Base64Encoder()); //DI이지만 내가 직접 객체를 만들고 있다. 그래서 다음장에 IoC를 이용한다.
+        //Encoder encoder = new Encoder(new UrlEncoder());
+        String result = encoder.encode(url);
+        System.out.println(result);
+
+    }
+}
+-----------------
+package com.company.ioc;
+
+public interface IEncoder {
+    String encode(String message);
+}
+-------------------
+package com.company.ioc;
+
+import java.util.Base64;
+
+public class Base64Encoder implements IEncoder{
+    public String encode(String message) {
+        return Base64.getEncoder().encodeToString(message.getBytes());
+    }
+}
+-------------------
+package com.company.ioc;
+
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
+
+public class UrlEncoder implements IEncoder{
+    public String encode(String message) {
+        try {
+            return URLEncoder.encode(message, "UTF-8");
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+            return null; //예외가 났을 떄는 null리턴
+        }
+    }
+}
+---------------------
+package com.company.ioc;
+
+import java.util.Base64;
+
+public class Encoder {
+    private IEncoder iEncoder;
+    
+    //외부에서 iEncoder를 주입받음
+    public Encoder(IEncoder iEncoder) { //new Base64Encoder()
+//        this.iEncoder = new Base64Encoder();
+//        this.iEncoder = new UrlEncoder();
+        this.iEncoder = iEncoder;
+    }
+
+    public String encode(String message)
+    {
+        return iEncoder.encode(message);
+    }
+}
+=======================================================================
+//이제 IoC개념을 보자 -> new할필요없다.
+package com.example.springioc;
+
+public interface IEncoder {
+    String encode(String message);
+}
+-----------------
+package com.example.springioc;
+
+import org.springframework.stereotype.Component;
+
+import java.util.Base64;
+
+@Component //Base64Encoder가 빈으로 등록된다.(스프링이 관리한다)
+public class Base64Encoder implements IEncoder{
+    public String encode(String message) {
+        return Base64.getEncoder().encodeToString(message.getBytes());
+    }
+}
+--------------------
+package com.example.springioc;
+
+import org.springframework.stereotype.Component;
+
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
+
+@Component
+public class UrlEncoder implements IEncoder{
+    public String encode(String message) {
+        try {
+            return URLEncoder.encode(message, "UTF-8");
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+            return null; //예외가 났을 떄는 null리턴
+        }
+    }
+}
+------------------------
+package com.example.springioc;
+
+import java.util.Base64;
+
+public class Encoder {
+    private IEncoder iEncoder;
+    
+    //외부에서 iEncoder를 주입받음
+    public Encoder(IEncoder iEncoder) { //new Base64Encoder()
+//        this.iEncoder = new Base64Encoder();
+//        this.iEncoder = new UrlEncoder();
+        this.iEncoder = iEncoder;
+    }
+
+    //bean을 주입받을수있는 장소가 변수,생성자, setter가 있다.
+    public void setIEncoder(IEncoder iEncoder) {
+        this.iEncoder =iEncoder;
+    }
+
+    public String encode(String message)
+    {
+        return iEncoder.encode(message);
+    }
+}
+----------------------------
+package com.example.springioc;
+
+import org.springframework.beans.BeansException;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
+import org.springframework.stereotype.Component;
+
+@Component //얘도 스프링에서 빈으로 등록해서 관리해줘
+public class ApplicationContextProvider implements ApplicationContextAware {
+
+    private static ApplicationContext context;
+
+    @Override
+    //여기도 보면 applicationContext 라는 객체를 외부로부터 주입을 받는다.(스프링이알아서)
+    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+        context = applicationContext;
+    }
+
+    public static ApplicationContext getContext() {
+        return context;
+    }
+}
+--------------------------------
+package com.example.springioc;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
+
+@SpringBootApplication //옆에 돋보기를 누르면 빈에 등록된 객체를 볼수있다.
+public class SpringIoCApplication {
+
+    public static void main(String[] args) {
+        String url = "www.naver.com/books/it?page=10&size=20&name=spring-boot";
+        SpringApplication.run(SpringIoCApplication.class, args);
+
+        //위에 SpringAppliction이 실행되고 나면
+        ApplicationContext context = ApplicationContextProvider.getContext();
+
+        //주입을 위해 (객체를 받음)
+        Base64Encoder base64Encoder = context.getBean(Base64Encoder.class);
+        UrlEncoder urlEncoder = context.getBean(UrlEncoder.class);
+        Encoder encoder = new Encoder(base64Encoder);
+
+        String result = encoder.encode(url); //base64Encoder
+        System.out.println(result);
+
+        //setter로 urlEncoder로 다시 주입
+        encoder.setIEncoder(urlEncoder);
+        result =encoder.encode(url);
+        System.out.println(result);
+    }
+
+}
+========================================================================
+//Encoder도 빈으로 등록해보자
+package com.example.springioc;
+
+public interface IEncoder {
+    String encode(String message);
+}
+---------------
+package com.example.springioc;
+
+import org.springframework.stereotype.Component;
+
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
+
+@Component
+public class UrlEncoder implements IEncoder{
+    public String encode(String message) {
+        try {
+            return URLEncoder.encode(message, "UTF-8");
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+            return null; //예외가 났을 떄는 null리턴
+        }
+    }
+}
+--------------------
+package com.example.springioc;
+
+import org.springframework.stereotype.Component;
+
+import java.util.Base64;
+
+@Component //Base64Encoder가 빈으로 등록된다.(스프링이 관리한다)
+//@Component("base74Encoder") 나는 이 이름으로 쓰겠다. @Qualifier("base74Encoder") 로 가능
+public class Base64Encoder implements IEncoder{
+    public String encode(String message) {
+        return Base64.getEncoder().encodeToString(message.getBytes());
+    }
+}
+----------------------
+package com.example.springioc;
+
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.stereotype.Component;
+
+import java.util.Base64;
+
+@Component //에러가뜨는데 빈에서 스프링이 선택할 때 하나만있으면 매칭되는데 지금은 우리가 base64, urlEncoder를 컴포넌트로 등록했기떄문에
+//@Qualifier로 지정해줘야된다.
+public class Encoder {
+    private IEncoder iEncoder;
+    
+    //외부에서 iEncoder를 주입받음(클래스의 앞글자는 소문자)
+    public Encoder(@Qualifier("urlEncoder") IEncoder iEncoder) { //new Base64Encoder()
+//        this.iEncoder = new Base64Encoder();
+//        this.iEncoder = new UrlEncoder();
+        this.iEncoder = iEncoder;
+    }
+
+    //bean을 주입받을수있는 장소가 변수,생성자, setter가 있다.
+    public void setIEncoder(IEncoder iEncoder) {
+        this.iEncoder =iEncoder;
+    }
+
+    public String encode(String message)
+    {
+        return iEncoder.encode(message);
+    }
+}
+-----------------------
+package com.example.springioc;
+
+import org.springframework.beans.BeansException;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
+import org.springframework.stereotype.Component;
+
+@Component //얘도 스프링에서 빈으로 등록해서 관리해줘
+public class ApplicationContextProvider implements ApplicationContextAware {
+
+    private static ApplicationContext context;
+
+    @Override
+    //여기도 보면 applicationContext 라는 객체를 외부로부터 주입을 받는다.(스프링이알아서)
+    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+        context = applicationContext;
+    }
+
+    public static ApplicationContext getContext() {
+        return context;
+    }
+}
+----------------------
+package com.example.springioc;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
+
+@SpringBootApplication //옆에 돋보기를 누르면 빈에 등록된 객체를 볼수있다.
+public class SpringIoCApplication {
+
+    public static void main(String[] args) {
+        String url = "www.naver.com/books/it?page=10&size=20&name=spring-boot";
+        SpringApplication.run(SpringIoCApplication.class, args);
+
+        //위에 SpringAppliction이 실행되고 나면
+        ApplicationContext context = ApplicationContextProvider.getContext();
+
+        //주입을 위해 (객체를 받음)
+        //Base64Encoder base64Encoder = context.getBean(Base64Encoder.class);
+        //UrlEncoder urlEncoder = context.getBean(UrlEncoder.class);
+        Encoder encoder = context.getBean(Encoder.class);
+
+        String result = encoder.encode(url); //Encoder에서 내가 @Qualifier("urlEncoder")로 했으니 url인코딩으로 된다.
+        System.out.println(result);
+
+    }
+
+}
+====================================================================
 
 
