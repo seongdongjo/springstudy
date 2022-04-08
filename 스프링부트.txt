@@ -2698,7 +2698,158 @@ public class ParameterAop {
     }
 }
 ==========================================================================================================
+//aop의 또 다른 기능은 메서드의 실행시간을 가지고 서버의 부하, 서버의 상태를 로깅으로 남길수있다.
+package com.example.aop.annotation;
 
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+
+@Target({ElementType.TYPE, ElementType.METHOD})
+@Retention(RetentionPolicy.RUNTIME) //런타임때 사용
+public @interface Timer {
+
+}
+---------------
+package com.example.aop.aop;
+
+import org.aspectj.lang.JoinPoint;
+import org.aspectj.lang.annotation.AfterReturning;
+import org.aspectj.lang.annotation.Aspect;
+import org.aspectj.lang.annotation.Before;
+import org.aspectj.lang.annotation.Pointcut;
+import org.aspectj.lang.reflect.MethodSignature;
+import org.springframework.stereotype.Component;
+
+import java.lang.reflect.Method;
+
+@Aspect //aop로 동작
+@Component //스프링에서 관리
+public class ParameterAop {
+    //controller하위 메서드가 실행되기전에 before부분이 실행될거고 그 후에 controller 메서드 실행 후 정상리턴되면 afterReturning에서 해당 object를 볼수가있다.
+    @Pointcut("execution(* com.example.aop.controller..*.*(..))") //어디에 적용시킬건지(controller패키지밑에 모든 메서드를 aop로 보겠다)
+    private void cut() {}
+
+    @Before("cut()") //cut이 실행되는 지점에 before메서드를 실핼
+    public void before(JoinPoint joinPoint) {
+        MethodSignature methodSignature = (MethodSignature) joinPoint.getSignature();
+        Method method = methodSignature.getMethod();
+        System.out.println("여기니? :" + method.getName());
+
+        //deletemapping은 여기 실행안됌. 받은 인자가 없어서 -> @AfterReturning으로
+        Object[] args = joinPoint.getArgs();
+        for(Object obj : args) {
+            System.out.println("여기는 실행안되네??");
+            System.out.println("type: " + obj.getClass().getSimpleName());
+            System.out.println("value: " + obj);
+
+        }
+    }
+
+    @AfterReturning(value = "cut()", returning = "returnObj")
+    public void afterReturn(JoinPoint joinPoint, Object returnObj) {
+        System.out.println("return obj:" + returnObj); //return obj: null (void라서)
+    }
+}
+-----------------
+package com.example.aop.aop;
+
+import org.aspectj.lang.ProceedingJoinPoint;
+import org.aspectj.lang.annotation.Around;
+import org.aspectj.lang.annotation.Aspect;
+import org.aspectj.lang.annotation.Pointcut;
+import org.springframework.stereotype.Component;
+import org.springframework.util.StopWatch;
+
+@Aspect
+@Component //@Component는 클래스단위로, @Bean은 클래스에 붙일 수 없다. @Bean은 메서드에서 사용
+public class TimerAop {
+    @Pointcut("execution(* com.example.aop.controller..*.*(..))")
+    private void cut() {}
+
+    @Pointcut("@annotation(com.example.aop.annotation.Timer)") //어노테이션이 @Timer로 설정된 메서드만 로깅을 할거야. 근데 시간을 잴거기 때문에
+    //전,후메서드가 필요한데 before,after로 timer를 공유할수없다. 이래서 @Around
+    private void enableTimer() {}
+
+    @Around("cut() && enableTimer()")
+    public void around(ProceedingJoinPoint joinPoint) throws Throwable {
+
+        StopWatch stopWatch = new StopWatch();
+        stopWatch.start();
+
+        System.out.println("전");
+        Object result = joinPoint.proceed(); //이 메서드의 실행 전 후로 나눈다.(위 아래) -> deletemapping에 있는 타이머 실행
+        System.out.println("후");
+        
+        stopWatch.stop();
+        System.out.println("total time: " + stopWatch.getTotalTimeSeconds()); //총 얼마나 걸렸는지 //이렇게 aop를 통해서 시간다 찍어서 모니터링가능
+    }
+}
+------------------
+package com.example.aop.controller;
+
+import com.example.aop.annotation.Timer;
+import com.example.aop.dto.User;
+import org.springframework.util.StopWatch;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/api")
+public class RestApiController {
+    @GetMapping("/get/{id}")
+    public String get(@PathVariable Long id, @RequestParam String name) {
+//        StopWatch stopWatch = new StopWatch();
+//        stopWatch.start();
+//        //Logic이 들어가는 곳
+//        stopWatch.stop();
+//        System.out.println("total time: " + stopWatch.getTotalTimeSeconds()); //총 얼마나 걸렸는지
+        return id + " " + name;
+    }
+
+    @PostMapping("/post")
+    public User post(@RequestBody User user) { //크롬에 body에 넣어서
+        //http://localhost:8080/api/post
+//        {
+//            "id" : "steve",
+//            "pw" : "1234",
+//            "email": "steve@gmail.com"
+//        }
+//        StopWatch stopWatch = new StopWatch();
+//        stopWatch.start();
+//        //Logic이 들어가는 곳.
+//        stopWatch.stop();
+//        System.out.println("total time: " + stopWatch.getTotalTimeSeconds()); //총 얼마나 걸렸는지
+        return user; //afterReturning으로
+    }
+
+    @Timer //우리가 직접만든 어노테이션
+    @DeleteMapping("delete")
+    public void delete() throws InterruptedException{ //http://localhost:8080/api/delete 
+        //delete하는데 2초 소요된다고 가정
+
+        //aop를 쓰지않으면 이렇게 중복된코드가 들어가는데 get, post에도 마찬가지로 실제적으로 Logic이 들어가는곳에 반복적으로 들어갈수있다.
+        //모든 메서드에 같은 기능이 들어갔다(횡단). 비즈니스로직과 전혀상관없는 이러한것들을 aop로 뺴는 것이다. 너네는 서비스로직만 신경써
+//        StopWatch stopWatch = new StopWatch();
+//        stopWatch.start();
+        System.out.println("타이머실행");
+        Thread.sleep(1000 * 2);
+        System.out.println("타이머종료");
+//        stopWatch.stop();
+//        System.out.println("total time: " + stopWatch.getTotalTimeSeconds()); //총 얼마나 걸렸는지
+    }
+}
+
+
+//출력결과 (여기서는 get,post가 실행되지않음. 요청이 delete로 왔기떄문에)
+여기니? :delete
+전
+타이머실행
+타이머종료
+후
+total time: 2.0212233
+return obj:null
+=======================================================================================
 
 
 
