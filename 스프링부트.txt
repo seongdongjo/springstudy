@@ -2765,7 +2765,7 @@ import org.springframework.util.StopWatch;
 @Aspect
 @Component //@Component는 클래스단위로, @Bean은 클래스에 붙일 수 없다. @Bean은 메서드에서 사용
 public class TimerAop {
-    @Pointcut("execution(* com.example.aop.controller..*.*(..))")
+    @Pointcut("execution(* com.example.aop.controller..*.*(..))") //모든메서드이지만 delete로 요청이 왔기때문에 delete 함수실행전 -> before로 이동
     private void cut() {}
 
     @Pointcut("@annotation(com.example.aop.annotation.Timer)") //어노테이션이 @Timer로 설정된 메서드만 로깅을 할거야. 근데 시간을 잴거기 때문에
@@ -2850,7 +2850,258 @@ public class RestApiController {
 total time: 2.0212233
 return obj:null
 =======================================================================================
+//aop의 또다른 기능 
+반환할 때 aop에서 특정한 객체로 반환해주거나, 암호화된 값이 들어올때 코드에서 복호화하는것이아니라 이미 aop에서 복호화가 된 상태로 들어오게 할 수 있고,
+밖으로 내보낼때도 aop단에서 변경할 수있다.
 
+package com.example.aop.dto;
+
+public class User {
+    private String id;
+    private String pw;
+    private String email;
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
+
+    public String getPw() {
+        return pw;
+    }
+
+    public void setPw(String pw) {
+        this.pw = pw;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    @Override
+    public String toString() {
+        return "User{" +
+                "id='" + id + '\'' +
+                ", pw='" + pw + '\'' +
+                ", email='" + email + '\'' +
+                '}';
+    }
+}
+--------------------
+//main(이메일 인코딩값얻기위해)
+package com.example.aop;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+import java.util.Base64;
+
+@SpringBootApplication
+public class AopApplication {
+
+    public static void main(String[] args) {
+
+        SpringApplication.run(AopApplication.class, args);
+        System.out.println(Base64.getEncoder().encodeToString("steve@gmail.com".getBytes())); //출력결과를 복사해서 크롬에 c3RldmVAZ21haWwuY29t
+    }
+
+
+}
+-----------------------
+package com.example.aop.annotation;
+
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+
+@Target({ElementType.TYPE, ElementType.METHOD})
+@Retention(RetentionPolicy.RUNTIME) //런타임때 사용
+public @interface Decode {
+
+}
+-------------------
+package com.example.aop.aop;
+
+import com.example.aop.dto.User;
+import org.aspectj.lang.JoinPoint;
+import org.aspectj.lang.annotation.AfterReturning;
+import org.aspectj.lang.annotation.Aspect;
+import org.aspectj.lang.annotation.Before;
+import org.aspectj.lang.annotation.Pointcut;
+import org.springframework.stereotype.Component;
+
+import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
+
+@Aspect
+@Component
+public class DecodeAop {
+    @Pointcut("execution(* com.example.aop.controller..*.*(..))")
+    private void cut() {}
+
+    @Pointcut("@annotation(com.example.aop.annotation.Decode)")
+    private void enableDecode() {}
+
+    //전은 디코드를 해서보낼꺼고
+    @Before(("cut() && enableDecode()"))
+    public void before(JoinPoint joinPoint) throws UnsupportedEncodingException {
+        Object[] args = joinPoint.getArgs();
+
+        for(Object arg : args) {
+            if(arg instanceof User) { //arg중에 User가 있으면
+                User user = User.class.cast(arg); //현재는 Object이기 떄문에 User로 형변환을 시킨다.
+                String base64Email = user.getEmail(); // 인코딩되있는 이메일을
+                String email = new String(Base64.getDecoder().decode(base64Email),"UTF-8"); //bytes로 반환 -> String으로
+
+                user.setEmail(email); //디코드된거(이렇게되면 컨트롤러에서는 유저라는 객체를 디코드 할 필요가없어진다)
+            }
+        }
+    }
+    //후는 인코드를 해서 보낼거다
+    @AfterReturning(value = "cut() && enableDecode()", returning = "returnObj")
+    public void afterReturn(JoinPoint joinPoint, Object returnObj) {
+        if(returnObj instanceof User) {
+            User user = User.class.cast(returnObj); //평문이메일을
+            String email = user.getEmail();
+            String base64Email = Base64.getEncoder().encodeToString(email.getBytes()); //인코딩
+            user.setEmail(base64Email);
+        }
+    }
+}
+-----------------------------
+package com.example.aop.aop;
+
+import org.aspectj.lang.JoinPoint;
+import org.aspectj.lang.annotation.AfterReturning;
+import org.aspectj.lang.annotation.Aspect;
+import org.aspectj.lang.annotation.Before;
+import org.aspectj.lang.annotation.Pointcut;
+import org.aspectj.lang.reflect.MethodSignature;
+import org.springframework.stereotype.Component;
+
+import java.lang.reflect.Method;
+
+@Aspect //aop로 동작
+@Component //스프링에서 관리
+public class ParameterAop {
+    //controller하위 메서드가 실행되기전에 before부분이 실행될거고 그 후에 controller 메서드 실행 후 정상리턴되면 afterReturning에서 해당 object를 볼수가있다.
+    @Pointcut("execution(* com.example.aop.controller..*.*(..))") //어디에 적용시킬건지(controller패키지밑에 모든 메서드를 aop로 보겠다)
+    private void cut() {}
+
+    @Before("cut()") //cut이 실행되는 지점에 before메서드를 실핼
+    public void before(JoinPoint joinPoint) {
+        MethodSignature methodSignature = (MethodSignature) joinPoint.getSignature();
+        Method method = methodSignature.getMethod();
+        System.out.println("여기니? :" + method.getName());
+
+        //deletemapping은 여기 실행안됌. 받은 인자가 없어서 -> @AfterReturning으로
+        Object[] args = joinPoint.getArgs();
+        for(Object obj : args) {
+            System.out.println("여기는 실행안되네??");
+            System.out.println("type: " + obj.getClass().getSimpleName());
+            System.out.println("value: " + obj);
+
+        }
+    }
+
+    @AfterReturning(value = "cut()", returning = "returnObj")
+    public void afterReturn(JoinPoint joinPoint, Object returnObj) {
+        System.out.println("return obj:" + returnObj); //return obj: null (void라서)
+    }
+}
+---------------------------------------
+package com.example.aop.controller;
+
+import com.example.aop.annotation.Decode;
+import com.example.aop.annotation.Timer;
+import com.example.aop.dto.User;
+import org.springframework.util.StopWatch;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/api")
+public class RestApiController {
+    @GetMapping("/get/{id}")
+    public String get(@PathVariable Long id, @RequestParam String name) {
+//        StopWatch stopWatch = new StopWatch();
+//        stopWatch.start();
+//        //Logic이 들어가는 곳
+//        stopWatch.stop();
+//        System.out.println("total time: " + stopWatch.getTotalTimeSeconds()); //총 얼마나 걸렸는지
+        return id + " " + name;
+    }
+
+    @PostMapping("/post")
+    public User post(@RequestBody User user) { //크롬에 body에 넣어서
+        //http://localhost:8080/api/post
+//        {
+//            "id" : "steve",
+//            "pw" : "1234",
+//            "email": "steve@gmail.com"
+//        }
+//        StopWatch stopWatch = new StopWatch();
+//        stopWatch.start();
+//        //Logic이 들어가는 곳.
+//        stopWatch.stop();
+//        System.out.println("total time: " + stopWatch.getTotalTimeSeconds()); //총 얼마나 걸렸는지
+        return user; //afterReturning으로
+    }
+
+    @Timer //우리가 직접만든 어노테이션
+    @DeleteMapping("delete")
+    public void delete() throws InterruptedException{
+        //delete하는데 2초 소요된다고 가정
+
+        //aop를 쓰지않으면 이렇게 중복된코드가 들어가는데 get, post에도 마찬가지로 실제적으로 Logic이 들어가는곳에 반복적으로 들어갈수있다.
+        //모든 메서드에 같은 기능이 들어갔다(횡단). 비즈니스로직과 전혀상관없는 이러한것들을 aop로 뺴는 것이다. 너네는 서비스로직만 신경써
+//        StopWatch stopWatch = new StopWatch();
+//        stopWatch.start();
+        System.out.println("타이머실행");
+        Thread.sleep(1000 * 2);
+        System.out.println("타이머종료");
+//        stopWatch.stop();
+//        System.out.println("total time: " + stopWatch.getTotalTimeSeconds()); //총 얼마나 걸렸는지
+    }
+
+    @Decode //값을 바꿔줄거기 때문에
+    @PutMapping("/put")
+    public User put(@RequestBody User user) { // 크롬에 http://localhost:8080/api/put
+//        {
+//            "id" : "steve",
+//            "pw" : "1234",
+//            "email" : "c3RldmVAZ21haWwuY29t" //인코딩된 이메일(main에서 출력해서 받아옴)
+//        }
+        System.out.println("put");
+        System.out.println(user); //실제 서비스로직에서는 평문
+        return user;
+    }
+    //출력결과 (처음에 인코딩된 email을 받아서 before에서 디코딩처리하고 setemail -> putmapping api실행 -> user를 after에 전달 -> after에서 인코딩 후 setemail
+//    여기니? :put
+//    여기는 실행안되네??
+//    type: User
+//    value: User{id='steve', pw='1234', email='steve@gmail.com'}
+//    put
+//    User{id='steve', pw='1234', email='steve@gmail.com'}
+//    return obj:User{id='steve', pw='1234', email='steve@gmail.com'}
+
+    //크롬에 응답온걸 보면
+//    {
+//        "id": "steve",
+//        "pw": "1234",
+//        "email": "c3RldmVAZ21haWwuY29t"
+//    }
+
+}
+=============================================================================================
 
 
 
