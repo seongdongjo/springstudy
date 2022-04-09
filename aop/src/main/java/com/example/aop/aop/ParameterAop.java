@@ -21,19 +21,20 @@ public class ParameterAop {
     public void before(JoinPoint joinPoint) {
         MethodSignature methodSignature = (MethodSignature) joinPoint.getSignature();
         Method method = methodSignature.getMethod();
-        System.out.println(method.getName());
+        System.out.println("여기니? :" + method.getName());
 
+        //deletemapping은 여기 실행안됌. 받은 인자가 없어서 -> @AfterReturning으로
         Object[] args = joinPoint.getArgs();
-        //크롬에서 body에 넣어서 보내게 되면
         for(Object obj : args) {
-            System.out.println("type: " + obj.getClass().getSimpleName()); //1(출력순서). type: User
-            System.out.println("value: " + obj); //2. User{id='steve', pw='1234', email='steve@gmail.com'}
-            //그 후에 RestApiController로 가서 post실행
+            System.out.println("여기는 실행안되네??");
+            System.out.println("type: " + obj.getClass().getSimpleName());
+            System.out.println("value: " + obj);
+
         }
     }
 
     @AfterReturning(value = "cut()", returning = "returnObj")
     public void afterReturn(JoinPoint joinPoint, Object returnObj) {
-        System.out.println("return obj:" + returnObj); //4. User{id='steve', pw='1234', email='steve@gmail.com'}
+        System.out.println("return obj:" + returnObj); //return obj: null (void라서)
     }
 }
