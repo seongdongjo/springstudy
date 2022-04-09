@@ -3102,6 +3102,442 @@ public class RestApiController {
 
 }
 =============================================================================================
+//object-mapper를 통해 json노드 접근 , objectmapper자체가 스프링프레임워크에서 사용하는 자바 라이브러리인것이지, objectmapper가 꼭 스프링에서 사용되는 것은 아니다.
+그래서 자바로 만들어보자 -> gradle로 만들자.(사진) 이러한 dependencies를 어디서 가져오나? 원래는 maven으로 설정을 해야하는데 우리는 gradle로 활용
+jackson databind 라이브러리를 maven repository에서 복사 -> 
+
+// https://mvnrepository.com/artifact/com.fasterxml.jackson.core/jackson-databind
+implementation group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.12.1'
+
+//이거를 build.gradle에 dependencies {
+	부분에 넣어야한다.
+}
+
+//확인하는 법은 우측에 gradle 클릭 -> dependencies부분, 또는 좌측에 external Libraries
+#)build.gradle
+plugins {
+    id 'java'
+}
+
+group 'org.example'
+version '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // https://mvnrepository.com/artifact/com.fasterxml.jackson.core/jackson-databind
+    implementation group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.12.1'
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.2'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.2'
+}
+
+test {
+    useJUnitPlatform()
+}
+--------------------
+#)sample.json(참조용)
+{
+  "name" : "홍길동",
+  "age" : 10,
+  "cars" : [
+    {
+      "name" : "K5",
+      "car_number" : "11가 1111",
+      "TYPE" : ""
+    },
+    {
+      "name" : "Q5",
+      "car_number" : "12가 1111",
+      "TYPE" : ""
+    }
+  ]
+}
+--------------------------
+package dto;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+//전체가 스네이크케이스면 여기다가 어노테이션 근데, 지금은 TYPE도 있기떄문에 전체가 스네이크케이스가 아니라서 별도로 설정
+public class Car {
+    private String name;
+    @JsonProperty("car_number")
+    private String carNumber;
+    @JsonProperty("TYPE")
+    private String type;
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getCarNumber() {
+        return carNumber;
+    }
+
+    public void setCarNumber(String carNumber) {
+        this.carNumber = carNumber;
+    }
+
+    public String getType() {
+        return type;
+    }
+
+    public void setType(String type) {
+        this.type = type;
+    }
+
+    @Override
+    public String toString() {
+        return "Car{" +
+                "name='" + name + '\'' +
+                ", carNumber='" + carNumber + '\'' +
+                ", type='" + type + '\'' +
+                '}';
+    }
+}
+----------------
+package dto;
+
+import java.util.List;
+
+public class User {
+    private String name;
+    private int age;
+    private List<Car> cars;
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public int getAge() {
+        return age;
+    }
+
+    public void setAge(int age) {
+        this.age = age;
+    }
+
+    public List<Car> getCars() {
+        return cars;
+    }
+
+    public void setCars(List<Car> cars) {
+        this.cars = cars;
+    }
+
+    @Override
+    public String toString() {
+        return "User{" +
+                "name='" + name + '\'' +
+                ", age=" + age +
+                ", cars=" + cars +
+                '}';
+    }
+}
+----------------------
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import dto.Car;
+import dto.User;
+
+import java.util.Arrays;
+import java.util.List;
+
+public class Main {
+    public static void main(String[] args) throws JsonProcessingException {
+        System.out.println("main");
+    
+        ObjectMapper objectMapper = new ObjectMapper();
+
+        User user = new User();
+        user.setName("홍길동");
+        user.setAge(10);
+
+        Car car1 = new Car();
+        car1.setName("k5");
+        car1.setCarNumber("11가 1111");
+        car1.setType("sedan");
+
+        Car car2 = new Car();
+        car2.setName("Q5");
+        car2.setCarNumber("12가 1111");
+        car2.setType("SUV");
+
+        List<Car> carList = Arrays.asList(car1,car2);
+        user.setCars(carList);
+
+        //인코딩설정 UTF-8 해야된다. settings, help에서 (사진),안하면 한글깨진다. json의 기본 인코딩이 UTF-8이기 때문에(윈도우에서는 설정해야한다)
+        System.out.println(user); //User{name='홍길동', age=10, cars=[Car{name='k5', carNumber='11가 1111', type='sedan'}, Car{name='Q5', carNumber='12가 1111', type='SUV'}]}
+
+        //json으로 바꿔보자
+        String json = objectMapper.writeValueAsString(user);
+        System.out.println(json); //{"name":"홍길동","age":10,"cars":[{"name":"k5","carNumber":"11가 1111","type":"sedan"},{"name":"Q5","carNumber":"12가 1111","type":"SUV"}]}
+        //이렇게 보면 헷갈릴수있으니 크롬에서 json validator가서 붙여넣으면 보기쉽게 나온다.
+        //JsonProperty붙인후(Car)
+        //{"name":"홍길동","age":10,"cars":[{"name":"k5","car_number":"11가 1111","TYPE":"sedan"},{"name":"Q5","car_number":"12가 1111","TYPE":"SUV"}]}
+
+        //이제 json노드 접근
+        JsonNode jsonNode = objectMapper.readTree(json); //여기서jsonNode는 sample.json에 정의한 전체 json을 의미
+        String _name = jsonNode.get("name").asText(); //jsonNode.get하면 object가 나오고 거기에 형변환으로 asText
+        int _age = jsonNode.get("age").asInt();
+        System.out.println("name : " +_name);
+        System.out.println("age : " +_age);
+
+        //Cars는 리스트 안에 또다른 jsonnode가 들어있는거나 마찬가지이다. 그래서 cars안에 있는 노드를 가져와야한다.
+        JsonNode cars = jsonNode.get("cars");
+        ArrayNode arrayNode = (ArrayNode)cars; //(ArrayNode)는 asText와같이 형변환을 위해서
+
+        List<Car> _cars = objectMapper.convertValue(arrayNode, new TypeReference<List<Car>>() {}); //convertValue : object 즉, json을 우리가 원하는 클래스로 변환가능
+        //이렇게 하면 arrayNode(object)를 받아서 우리가 원하는 List<Car>라는 타입으로 변환
+        System.out.println(_cars); //[Car{name='k5', carNumber='11가 1111', type='sedan'}, Car{name='Q5', carNumber='12가 1111', type='SUV'}]
+
+        //위에 처럼 json을 가져온 후 값이 바꿔보자
+        ObjectNode objectNode = (ObjectNode)jsonNode;
+        objectNode.put("name","steve");
+        objectNode.put("age", 20);
+
+        System.out.println(objectNode.toPrettyString());
+//        {
+//            "name" : "steve",  //이렇게 바뀐걸볼수있다. 이렇게 objectmapper를 통해서 각각의 jsonnode에 접근가능하다.
+//                "age" : 20,
+//                "cars" : [ {
+//            "name" : "k5",
+//                    "car_number" : "11가 1111",
+//                    "TYPE" : "sedan"
+//        }, {
+//            "name" : "Q5",
+//                    "car_number" : "12가 1111",
+//                    "TYPE" : "SUV"
+//        } ]
+//        }
+
+    }
+}
+==================================================================================
+//spring boot validation(스프링부트의 기능 중 하나)
+validation이란 특히 java에서는 null값에 대해서 접근하려고 할 떄 null pointer exception이 발생함으로, 이러한 부분을 방지하기 위해서 
+미리 검증을 하는 과정을 validation이라고 한다.
+
+public void run(String account, String pw, int age) {
+	if(account == null || pw == null) {
+		return 0;
+	}
+	...
+	정상로직(비즈니스로직)
+}
+
+하지만 이게 매개변수가 늘어나고, 객체가 들어오고 하면 코드가 복잡해진다. 비즈니스로직이 잘 안보이게된다.
+따라서 service logic과의 분리가 필요하다.
+
+여기서 스프링에서는 일관된 validation이 존재하는데 어노테이션 기반이다.
+@Size : 문자길이 측정(int type불가)
+@NotNull : null 불가
+@NotEmpty : null, ""불가
+@NotBlank : null, "", " "불가(띄어쓰기도완됌. 무조건 글자한개이상 들어가야됌)
+@Past : 과거날짜
+@PastOrPresent : 오늘이거나 과거 날짜
+@Future : 미래 날짜
+@FutureOrPresent : 오늘이거나 미래 날짜
+@Pattern : 정규식 적용(이메일이냐 핸드폰이냐)
+@Max : 최대값
+@Min : 최소값
+@AssertTrue/False : 별도 Logic적용
+@Vaild : 해당 object validation 실행
+
+build.gradle에서 dependencies해줘야한다.
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+}
+-----------------
+package com.example.validation.dto;
+
+import javax.validation.constraints.Email;
+import javax.validation.constraints.Max;
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.Pattern;
+
+public class User {
+    @NotBlank
+    private String name;
+    @Max(value = 90)
+    private int age;
+    @Email //이렇게 하면 main에서 @Valid @RequestBody User user 이렇게 @Valid를 붙여햐한다. 그러면 User를 request할때 email변수에대해서 검사한다.
+    private String email;
+
+    @Pattern(regexp = "^\\d{2,3}-\\d{3,4}-\\d{4}$", message = "핸드폰 번호의 양식과 맞지 않습니다. 01x-xxx(x)-xxxx") //@Vaild마찬가지
+    //@Pattern(regexp = "^\\d{2,3}-\\d{3,4}-\\d{4}$") //@Vaild마찬가지
+    private String phoneNumber;
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public int getAge() {
+        return age;
+    }
+
+    public void setAge(int age) {
+        this.age = age;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public String getPhoneNumber() {
+        return phoneNumber;
+    }
+
+    public void setPhoneNumber(String phoneNumber) {
+        this.phoneNumber = phoneNumber;
+    }
+
+    @Override
+    public String toString() {
+        return "User{" +
+                "name='" + name + '\'' +
+                ", age=" + age +
+                ", email='" + email + '\'' +
+                ", phoneNumber='" + phoneNumber + '\'' +
+                '}';
+    }
+}
+
+------------------
+package com.example.validation.controller;
+
+import com.example.validation.dto.User;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.validation.BindingResult;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import javax.validation.Valid;
+
+//{
+//        "name" : "홍길동",
+//        "age" : 10,
+//        "email" : "abced",
+//        "phoneNumber" : "01011112222"
+//}
+
+@RestController
+@RequestMapping("/api")
+public class ApiController {
+    @PostMapping("/user") // http://localhost:8080/api/user
+    public User user(@RequestBody User user) {
+        //근데 이거는 email이나 phoneNumber가 정상적인 요청이아니다. 이메일은 @가 들어가야하는데 요청이 잘못됌, 나이도 100살이하로 받아야됀다.
+        System.out.println(user); //User{name='홍길동', age=120, email='abced', phoneNumber='01011112222'}
+        return user;
+    }
+
+    //그래서 기존에서는 이렇게 하나씩 if문써서 했다.
+    @PostMapping("/user1")
+    public ResponseEntity user1(@RequestBody User user) {
+        System.out.println(user);
+        if(user.getAge() >= 100) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(user);
+        }
+        return ResponseEntity.ok(user);
+    }
+    //그래서 User class를 참조해보면 validation을 붙힌다.
+    @PostMapping("/user2") // http://localhost:8080/api/user
+    public User user2(@Valid @RequestBody User user) { //@Valid를 붙인다.
+        System.out.println(user);
+        return user;
+    }
+
+    //이렇게 전송 시
+//    {
+//            "name" : "홍길동",
+//            "age" : 101,
+//            "email" : "abced",
+//            "phoneNumber" : "01011112222"
+//    }
+    //근데 클라이언트가 잘못입력 시 지금은 예외가 바로 터지는데 Validation의 결과를 BindingResult으로 들어오게만든후 메시지를 출력해보자
+    @PostMapping("/user3") // http://localhost:8080/api/user
+    public ResponseEntity user3(@Valid @RequestBody User user, BindingResult bindingResult) { //@Valid를 붙인다.
+        if(bindingResult.hasErrors()) {
+            StringBuilder sb = new StringBuilder();
+            bindingResult.getAllErrors().forEach(objectError -> {
+                FieldError field = (FieldError) objectError;
+                String message = objectError.getDefaultMessage();
+
+                System.out.println("field :" +field.getField());
+                System.out.println(message);
+            });
+        }
+        System.out.println(user);
+        return ResponseEntity.ok(user); //client body에 user 객체를 보낸다. (보여주기위해)
+        //출력결과
+//        field :email
+//        올바른 형식의 이메일 주소여야 합니다
+//        field :phoneNumber
+//        "^\d{2,3}-\d{3,4}-\d{4}$"와 일치해야 합니다
+//        User{name='홍길동', age=101, email='abced', phoneNumber='01011112222'}
+    }
+    //근데 에러 메시지가 예쁘지가 않다. (전화번호) 그래서 User class에서 메시지를 지정해줄도 있다
+    @PostMapping("/user4") // http://localhost:8080/api/user
+    public ResponseEntity user4(@Valid @RequestBody User user, BindingResult bindingResult) { //@Valid를 붙인다.
+        if (bindingResult.hasErrors()) {
+            StringBuilder sb = new StringBuilder();
+            bindingResult.getAllErrors().forEach(objectError -> {
+                FieldError field = (FieldError) objectError;
+                String message = objectError.getDefaultMessage();
+
+                System.out.println("field :" + field.getField());
+                System.out.println(message);
+
+                sb.append("filed: " + field.getField());
+                sb.append("message: " + message);
+
+            });
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(sb.toString());
+            //출력결과: filed: phoneNumbermessage: 핸드폰 번호의 양식과 맞지 않습니다. 01x-xxx(x)-xxxxfiled: emailmessage: 올바른 형식의 이메일 주소여야 합니다filed: agemessage: 90 이하여야 합니다
+        }
+        //여기는 logic부분 이제 쓰면됌
+
+        return ResponseEntity.ok(user); //if문을 돌지않으면 여기로
+    }
+
+}
+
+==================================================
+//Custom Validation 
+@Assert/False와 같은 method지정을 통해서 직접 로직 가능
+즉, 커스텀을 통해 재사용이 가능
+
+
+
+
+
 
 
 
