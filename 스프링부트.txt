@@ -305,7 +305,7 @@ OCP(개방퍠쇄원칙)을 따른다.
 package com.company.adapter;
 
 public interface Electronic110V {
-    void powerOn();
+    void powerOn(); //구현은 클래스에서
 }
 -------------
 package com.company.adapter;
@@ -365,12 +365,12 @@ import com.company.singleton.SocketClient;
 public class Main {
 
     public static void main(String[] args) {
-     
+		
         HairDryer hairDryer = new HairDryer();
         connect(hairDryer); //출력: 헤어드라이어 110V
 
         Cleaner cleaner = new Cleaner();
-        //connect(cleaner); 이렇게하면에러가난다. 현재 connect메서드는 110V만 연결가능하다.
+        //connect(cleaner); 이렇게하면에러가난다.(객체함수가 아니라 main에서 호출하기떄문에) 현재 connect메서드는 110V만 연결가능하다.
         //그래서 어댑터가 필요.(220 -> 110v로 바꿔주는)
 
         Electronic110V adapter = new SocketAdapter(cleaner); //220v을 어댑터를 통해 연결
@@ -384,13 +384,49 @@ public class Main {
     }
     //콘센트
     //main함수가 static이니까 여기도 static
-    public static void connect(Electronic110V electronic110V) {
+    public static void connect(Electronic110V electronic110V) { //SocketAdapter로 생성한
         electronic110V.powerOn();
     }
 
 }
 ====================================================================================
 //프록시패턴
+클라이언트가 proxy에게 요청을 보내면, 요청을 받은 proxy가 실제 서비스를 하는 메서드를 찾아 호출하는 것
+A(B에게 요청)->B(A에게 받은 요청 C에게 전달)->C(실행) 여기서 B는 실행을 위한 대리인일 뿐이지, 실제 실행을 하지 않는다.
+
+장점: 전처리 및 후처리 사용에 용이(B가 C에게 요청하기 전 다른 작업을 전처리로 가능하다는점)
+    특정 메서드에 대한 보안이 좋다.(B가 C에게 요청을하여 A는 C가 무슨일이 일어아는지 정확히 알기힘들다)
+
+public interface Subject {
+	String do();
+}
+-----------
+public class Real implements Subject {
+	@Override
+	public String Do() {
+		return "끝단";
+	}
+}
+-----------
+public class Proxy implements Subject {
+	Subject real;
+	
+	@Override
+	public String do() {
+		real = new Real();
+		return real.do();
+	}
+}
+-------------
+public class Main {
+	public static void main(String[] args) {
+		//직접 호출하지 않고 프록시를 호출
+		IService proxy = new Proxy();
+		System.out.println(proxy.do);
+	}
+}
+=====================================================================================
+//프록시
 package com.company.proxy;
 
 public interface IBrowser {
@@ -504,11 +540,11 @@ public class Main {
 
         //프록시를 통해호출
         IBrowser browser1 = new BrowserProxy("www.naver.com"); //처음은 html을 생성
-        browser.show(); //여기서부터는 cache를 이용함
-        browser.show();
-        browser.show();
-        browser.show();
-        browser.show();
+        browser1.show(); //여기서부터는 cache를 이용함
+        browser1.show();
+        browser1.show();
+        browser1.show();
+        browser1.show();
 
 		AtomicLong start = new AtomicLong();
         AtomicLong end = new AtomicLong();
@@ -655,7 +691,7 @@ ex)교실에서 망을보다가 선생님오시면 이벤트전달해주는 역�
 package com.company.observer;
 
 public interface IButtonListener {
-    void clickEvent(String event);
+    void clickEvent(String event); //함수구현은 메인에서 익명클래스로
 }
 ------------
 package com.company.observer;
@@ -696,7 +732,8 @@ public class Main {
     public static void main(String[] args) {
 
         Button button = new Button("버튼");
-
+ 
+		//함수정의만 했음 -> clickEvent
         button.addListener(new IButtonListener() { //익명클래스
             @Override
             public void clickEvent(String event) {
@@ -4029,8 +4066,149 @@ import javax.validation.Valid;
 
 }
 =============================================================
+//spring boot execption처리
+1. 에러페이지로 보낸다.
+2. 4xx Error 5xx Error
+3. client가 200밖에 처리하지못할 때 200을 내려주고 별도의 에러 Message 전달
 
+@ControllerAdvice : Global예외처리,특정 package/Controller예외처리
+@ExceptionHandler : 특정 Controller의 예외처리
 
+package com.example.exception.dto;
+
+import javax.validation.constraints.Min;
+import javax.validation.constraints.NotEmpty;
+import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Size;
+
+public class User {
+
+    @NotEmpty
+    @Size(min = 1, max = 10)
+    private String name;
+
+    @Min(1)
+    @NotNull
+    private Integer age;
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public int getAge() {
+        return age;
+    }
+
+    public void setAge(int age) {
+        this.age = age;
+    }
+
+    @Override
+    public String toString() {
+        return "User{" +
+                "name='" + name + '\'' +
+                ", age=" + age +
+                '}';
+    }
+}
+----------------------
+package com.example.exception.controller;
+
+import com.example.exception.dto.User;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.*;
+
+import javax.validation.Valid;
+
+@RestController
+@RequestMapping("/api/user")
+public class ApiController {
+    @GetMapping("")
+    public User get(@RequestParam(required = false) String name, @RequestParam(required = false) Integer age) { //Integer로 한이유는 @NotNull하기위해 (userclass 변수에)
+        User user = new User();
+        user.setAge(age); //age를 입력받지 않으면 null pointer에러가난다. set은 int를 받아야되는데 null을 받았기떄문에
+        user.setName(name);
+
+        int a = 10+age; 
+
+        return user;
+    }
+	
+	이렇게 요청 시 
+	//{
+	//	"name" : "",
+	//	"age" : 0,
+	//}
+
+    @PostMapping("")  
+    public User post(@Valid @RequestBody User user) { //@RequestBody는 알아서 User 에 setter해준다.
+        System.out.println(user); //빈값을 보내면 서버에서는 에러가 default message [크기가 1에서 10 사이여야 합니다]] ] 이런식으로 에러가뜬다.
+        //근데 클라이언트 입장에서는 아래처럼 400에러 라고 뜨면서 불친절하다. 그래서 직접만들자. -> 내가만든 GlobalControllerAdvice class참조
+//        {
+//            "timestamp": "2022-04-10T12:26:45.517+00:00",
+//                "status": 400,
+//                "error": "Bad Request",
+//                "path": "/api/user"
+//        }
+        return user;
+    }
+
+    //GlobalControllerAdvice에서 예외 설정은 했지만 우선순위는 컨트롤러에서 지정한 ExceptionHandler를 먼저 탄다.
+        @ExceptionHandler(value = MethodArgumentNotValidException.class)
+        public ResponseEntity methodArgumentNotValidException(MethodArgumentNotValidException e) {
+            //기존에 뜨던 방식
+            //        {
+//            "timestamp": "2022-04-10T12:26:45.517+00:00",
+//                "status": 400,
+//                "error": "Bad Request",
+//                "path": "/api/user"
+//        }
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage()); //불친절한 메시지가 응답으로 간다. (그래도 어디서 예외났는지는 알수있다)
+        }
+}
+----------------------------
+package com.example.exception.advice;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+//@RestContollerAdvice(basePackages = "com.example.exception.controller") 이 패키지에 발생하는 예외를 처리
+
+@RestControllerAdvice //@RestContoller에 할거니까
+public class GlobalControllerAdvice {
+
+    @ExceptionHandler(value = Exception.class) //이 프로젝트에서 일어나는 모든 예외를 잡을거다
+    public ResponseEntity exception(Exception e) { //즉, 예외가 터지면 다 이쪽을 탈것이다. 터진예외메시지를 e 를 통해 받는다.
+        System.out.println(e.getClass().getName()); //무슨에러인지 보기위해 -> MethodArgumentNotValidException 이라고 뜬다. -> @ExceptionHandler 처리
+        System.out.println(e.getLocalizedMessage()); //이거는 불친절한 에러
+
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("");
+    }
+
+    @ExceptionHandler(value = MethodArgumentNotValidException.class)
+        public ResponseEntity methodArgumentNotValidException(MethodArgumentNotValidException e) {
+        //기존에 뜨던 방식
+        //        {
+//            "timestamp": "2022-04-10T12:26:45.517+00:00",
+//                "status": 400,
+//                "error": "Bad Request",
+//                "path": "/api/user"
+//        }
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage()); //불친절한 메시지가 응답으로 간다. (그래도 어디서 예외났는지는 알수있다)
+        }
+}
+======================================================================
+
+ 
 
 
 
