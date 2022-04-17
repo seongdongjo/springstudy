@@ -5180,6 +5180,733 @@ public interface BookDAO {
 </body>
 </html>
 ===================================================================
+//day09
+
+#)rootcontext.xml
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:mybatis-spring="http://mybatis.org/schema/mybatis-spring"
+	xsi:schemaLocation="http://mybatis.org/schema/mybatis-spring http://mybatis.org/schema/mybatis-spring-1.2.xsd
+		http://www.springframework.org/schema/beans https://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.3.xsd">
+	
+	<!-- Root Context: defines shared resources visible to all other web components -->
+	<!-- 
+			Connection을 관리해주는 dataSource는 hikariCP로 처리하고,
+			DB에 접속 및 쿼리문 수행, 객체-관계 맵핑은 myBatis 로 처리한다
+	 -->
+	<bean id="hikariConfig" class="com.zaxxer.hikari.HikariConfig">
+		<property name="driverClassName" value="oracle.jdbc.OracleDriver" />
+		<property name="jdbcUrl" value="jdbc:oracle:thin:@192.168.1.100:1521:xe" />
+		<property name="username" value="c##itbank" />
+		<property name="password" value="it" />
+	</bean>
+	
+	<bean id="dataSource" class="com.zaxxer.hikari.HikariDataSource" destroy-method="close">
+		<constructor-arg ref="hikariConfig" />
+	</bean>
+	
+	<bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+		<property name="dataSource" ref="dataSource" />
+		
+		<!-- myBatis 에서 xml형식의 mapper 파일을 작성할때 사용하는 설정 -->
+		<property name="configLocation" value="classpath:config/mybatis-config.xml" />
+		
+		<!-- mapper 파일의 경로를 리스트 형식으로 작성 -->
+		<property name="mapperLocations">
+			<list>
+				<value>classpath:config/sqlmap-member.xml</value>
+				<value>classpath:config/sqlmap-book.xml</value>
+			</list>
+		</property>
+	</bean>
+	
+	<bean id="sqlSessionTemplate" class="org.mybatis.spring.SqlSessionTemplate" destroy-method="close">
+		<constructor-arg ref="sqlSessionFactory" />
+	</bean>
+	
+	<context:component-scan base-package="com.itbank.service" />
+	<context:component-scan base-package="com.itbank.member" />
+	
+	<mybatis-spring:scan base-package="com.itbank.model" /><!-- interface만 -->
+	<mybatis-spring:scan base-package="com.itbank.member" />
+	<mybatis-spring:scan base-package="com.itbank.book" />
+		
+</beans>
+---------------------------
+#)servlet-context.xml
+<?xml version="1.0" encoding="UTF-8"?>
+<beans:beans xmlns="http://www.springframework.org/schema/mvc"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:beans="http://www.springframework.org/schema/beans"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xsi:schemaLocation="http://www.springframework.org/schema/mvc https://www.springframework.org/schema/mvc/spring-mvc.xsd
+		http://www.springframework.org/schema/beans https://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/context https://www.springframework.org/schema/context/spring-context.xsd">
+
+	<!-- DispatcherServlet Context: defines this servlet's request-processing infrastructure -->
+	
+	<!-- Enables the Spring MVC @Controller programming model -->
+	<annotation-driven />
+
+	<!-- Handles HTTP GET requests for /resources // by efficiently serving up static resources in the ${webappRoot}/resources directory -->
+	<resources mapping="/resources/**" location="/resources/" />
+
+	<!-- Resolves views selected for rendering by @Controllers to .jsp resources in the /WEB-INF/views directory -->
+	<beans:bean class="org.springframework.web.servlet.view.InternalResourceViewResolver">
+		<beans:property name="prefix" value="/WEB-INF/views/" />
+		<beans:property name="suffix" value=".jsp" />
+	</beans:bean>
+	
+	<interceptors>		<!-- 인터셉터들을 여기서 선언합니다 -->
+		<interceptor>	<!-- 그중 첫번째 -->
+<!-- 			<mapping path="/addBook" />	이 주소로 접근하면 -->
+<!-- 			<mapping path="/modifyBook/**" /> -->
+<!-- 			<mapping path="/deleteBook/**" /> -->
+
+			<mapping path="/**" />					<!-- 모든 경로를 인터셉터 대상에 포함시키고 -->			
+			<exclude-mapping path="/"/>				<!-- 대문페이지 -->
+			<exclude-mapping path="/login"/>		<!-- 로그인 페이지 -->
+			<exclude-mapping path="/join"/>			<!-- 회원가입 페이지 -->
+			<exclude-mapping path="/newPass"/>		<!-- 비밀번호 재발급 페이지 -->
+			<exclude-mapping path="/resources/**"/>	<!-- 정적 자원에 대한 요청 -->
+			<exclude-mapping path="/bookList/**"/>	<!-- 도서 목록만 제외시킵니다 -->
+			
+			<!-- 아래에 있는 인터셉터가 작동합니다 -->
+			<beans:bean id="loginIntercepter" class="com.itbank.intercepter.LoginIntercepter" />
+		</interceptor>
+	</interceptors>
+	
+	<context:component-scan base-package="com.itbank.controller" />
+	
+</beans:beans>
+-----------------------------------
+#)resources/mybatis-config.xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE configuration PUBLIC 
+	"-//mybatis.org//DTD Config 3.0//EN" 
+	"http://mybatis.org/dtd/mybatis-3-config.dtd">
+	
+<configuration>
+	<settings>
+		<setting name="cacheEnabled" value="false" />
+		<setting name="useGeneratedKeys" value="false" />
+		<setting name="mapUnderscoreToCamelCase" value="false" />
+		<!-- 	user_name => userName	-->
+	</settings>
+	
+	<typeAliases>
+		<typeAlias type="com.itbank.member.MemberDTO" alias="member" />
+		<typeAlias type="com.itbank.book.BookDTO" alias="book" />
+	</typeAliases>
+	
+</configuration>
+------------------------
+#)sqlmap-book.xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC 
+	"-//mybatis.org//DTD Mapper 3.0//EN" 
+	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+	
+<mapper namespace="com.itbank.book.BookDAO">
+	
+	<select id="selectList" resultType="book" parameterType="hashmap">
+		select * from book
+		<if test="column != null">
+			<choose>
+				<when test="column == 'idx'">
+					where ${column} = #{search}
+				</when>
+				<when test="column == 'name' or column == 'author'">
+					where ${column} like '%'||#{search}||'%'
+				</when>
+			</choose>
+		</if> 
+			order by ${order}
+	</select>
+	
+	<update id="update" parameterType="book">
+		update book
+			<set>
+				<if test="name != null">name = #{name},</if>
+				<if test="author != null">author = #{author},</if>
+				<if test="publisher != null">publisher = #{publisher},</if>
+				<if test="publishDate != null">publishDate = #{publishDate},</if>
+				<if test="price != null">price = #{price},</if>
+				<if test="description != null">description = #{description},</if>
+			</set>
+			where
+				idx = #{idx}
+	</update>
+	
+	<insert id="insert" parameterType="book">
+		insert into book values (
+			book_seq.nextval,
+			#{name}, #{author}, #{publisher}, #{publishDate}, #{price}, #{description}		
+		)
+	</insert>
+	
+</mapper>	
+--------------------------
+#)sqlmap-member.xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC 
+	"-//mybatis.org//DTD Mapper 3.0//EN" 
+	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+	
+<mapper namespace="com.itbank.member.MemberDAO">
+
+	<select id="selectMember" resultType="member" parameterType="member">
+		select * from member 
+			where 
+				userid = #{userid} 
+				<if test="userpw != null">and userpw = #{userpw}</if>
+				<if test="email != null">and email = #{email}</if>
+	</select>
+	
+	<update id="update" parameterType="member">
+		update member 
+			<set>
+				<if test="userpw != null">userpw = #{userpw},</if>
+				<if test="username != null">username = #{username},</if>
+				<if test="email != null">email = #{email},</if>
+				<if test="gender != null">gender = #{gender},</if>
+			</set>
+			where
+				userid = #{userid}
+	</update>
+	
+	<insert id="insert" parameterType="member">
+		insert into member values (
+			#{userid},
+			#{userpw},
+			#{username},
+			#{email},
+			#{gender}
+		)
+	</insert>
+</mapper>
+-------------------------
+#)BookDTO
+package com.itbank.book;
+
+import java.sql.Date;
+
+//  TABLE : BOOK
+//	IDX			NUMBER				No	"C##ITBANK"."BOOK_SEQ"."NEXTVAL"
+//	NAME		VARCHAR2(200 BYTE)	No	
+//	AUTHOR		VARCHAR2(50 BYTE)	No	
+//	PUBLISHER	VARCHAR2(100 BYTE)	No	
+//	PUBLISHDATE	DATE				No	
+//	PRICE		NUMBER				No	
+//	DESCRIPTION	VARCHAR2(2000 BYTE)	No	
+
+public class BookDTO {
+
+	private int idx;
+	private String name, author, publisher;
+	private Date publishDate;
+	private int price;
+	private String description;
+	
+	public int getIdx() {
+		return idx;
+	}
+	public void setIdx(int idx) {
+		this.idx = idx;
+	}
+	public String getName() {
+		return name;
+	}
+	public void setName(String name) {
+		this.name = name;
+	}
+	public String getAuthor() {
+		return author;
+	}
+	public void setAuthor(String author) {
+		this.author = author;
+	}
+	public String getPublisher() {
+		return publisher;
+	}
+	public void setPublisher(String publisher) {
+		this.publisher = publisher;
+	}
+	public Date getPublishDate() {
+		return publishDate;
+	}
+	public void setPublishDate(Date publishDate) {
+		this.publishDate = publishDate;
+	}
+	public int getPrice() {
+		return price;
+	}
+	public void setPrice(int price) {
+		this.price = price;
+	}
+	public String getDescription() {
+		return description;
+	}
+	public void setDescription(String description) {
+		this.description = description;
+	}
+}
+-------------------------------
+#)BookDAO
+package com.itbank.book;
+
+import java.util.HashMap;
+import java.util.List;
+
+import org.apache.ibatis.annotations.Delete;
+import org.apache.ibatis.annotations.Select;
+
+public interface BookDAO {
+
+	List<BookDTO> selectList(HashMap<String, String> map);
+
+	@Delete("delete book where idx=#{idx}")
+	int delete(int idx);
+
+	@Select("select * from book where idx=#{idx}")
+	BookDTO select(int idx);
+
+	int update(BookDTO dto);
+
+	int insert(BookDTO dto);
+
+}
+--------------------------------
+#)MemberController.java
+package com.itbank.controller;
+
+import java.util.List;
+
+import javax.servlet.http.HttpSession;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DuplicateKeyException;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.servlet.ModelAndView;
+
+import com.itbank.member.MemberDTO;
+import com.itbank.service.MemberService;
+
+@Controller
+public class MemberController {
+	
+	@Autowired private MemberService ms;
+
+	@GetMapping("/memberList")
+	public ModelAndView memberList() {
+		ModelAndView mav = new ModelAndView();
+		List<MemberDTO> list = ms.getMemberList();
+		mav.addObject("list", list);
+		return mav;
+	}
+	
+	@GetMapping("/join")
+	public void join() {}
+	
+	@PostMapping("/join")
+	public String join(MemberDTO dto) {
+		int row = ms.join(dto);
+		System.out.println(row == 1 ? "가입 성공" : "가입 실패");
+		return "redirect:/login";
+	}
+	
+	@GetMapping("/login") 
+	public void login() {}
+	
+	@PostMapping("/login")	// POST라도 주소창에 쿼리스트링이 있으면 파라미터 형식으로 받을 수 있다 !!
+	public String login(MemberDTO dto, HttpSession session, String url) {
+		System.out.println("컨트롤러에서 받은 주소 : " + url);
+		
+		MemberDTO login = ms.login(dto);		// DB에서 받아온 계정을
+		session.setAttribute("login", login);	// 현재 세션에 저장
+		System.out.println(login == null ? "실패" : "성공 : " + login.getUserid());
+		
+		// 요청받은 주소가 별도로 있으면, 그 주소로 이동시키고 아니면 대문페이지로 이동시킨다
+		return (url == null) ? "redirect:/" : "redirect:" + url;
+	}
+	
+	@GetMapping("/logout")
+	public String logout(HttpSession session) {
+		session.invalidate();
+		return "redirect:/";
+	}
+	
+	@GetMapping("/memberInfo")
+	public ModelAndView memberInfo(HttpSession session) {
+		ModelAndView mav = new ModelAndView();
+		mav.setViewName("memberInfo"); 	// 생성자 매개변수로 넣지 않는다면 setter를 활용할수 있다
+		
+		MemberDTO login = (MemberDTO)session.getAttribute("login");
+		MemberDTO info = ms.login(login);	// 차후 보안요소를 생각한다면, 비번을 한번 더 입력받는 것이 맞다
+		mav.addObject("info", info);
+		
+		return mav;
+	}
+	
+	@GetMapping("/memberUpdate")
+	public ModelAndView memberUpdate(HttpSession session) {
+		ModelAndView mav = new ModelAndView();
+		
+		MemberDTO login = (MemberDTO) session.getAttribute("login");
+		MemberDTO info = ms.login(login);
+		mav.addObject("info", info);
+		return mav;
+	}
+	
+	@PostMapping("/memberUpdate")
+	public ModelAndView memberUpdate(MemberDTO dto, HttpSession session) {
+		int row = ms.update(dto);
+		ModelAndView mav = new ModelAndView("alert");
+		mav.addObject("msg", row == 1 ? "수정 성공" : "수정 실패");
+		mav.addObject("url", row == 1 ? "login" : "");
+		if(row == 1)	session.removeAttribute("login");
+		return mav;
+	}
+	
+	@GetMapping("/newPass")
+	public void newPass() {}
+	
+	@PostMapping("/newPass")
+	public ModelAndView newPass(MemberDTO dto) {
+		ModelAndView mav = new ModelAndView("alert");
+		
+		// ID와 Email이 일치하는 계정이 있는가
+		MemberDTO target = ms.findMemberByEmail(dto);
+		
+		if(target != null) {
+			// 계정이 있으면, 새로 문자열을 만들어서 update 하고
+			String newPass = ms.newPass(target);
+			
+			// 사용자에게 신규 비밀번호를 alert을 통해서 알려주기
+			// 로그인 페이지로 이동
+			mav.addObject("msg", "변경된 비밀번호는 [" + newPass + "] 입니다");
+			mav.addObject("url", "/login");
+		}
+		else {
+			// 일치하는 계정이 없다는 메시지를 alert을 통해서 알려주기
+			// 이전페이지로 이동
+			mav.addObject("msg", "입력한 정보와 일치하는 계정이 없습니다");
+		}
+		return mav;
+	}
+	
+	@ExceptionHandler(DuplicateKeyException.class)	// PK나 UK가 중복되어 발생하는 예외
+	public ModelAndView duplicateJoin(DuplicateKeyException e) {
+		ModelAndView mav = new ModelAndView("alert");
+		mav.addObject("msg", "이미 사용중인 ID입니다. 다른 ID로 가입을 시도해 주세요");
+		return mav;
+	}
+}
+---------------------------
+#)HomeController.java
+package com.itbank.controller;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.servlet.ModelAndView;
+
+import com.itbank.service.TestService;
+
+@Controller
+public class HomeController {
+	
+	@Autowired private TestService ts;
+
+	@RequestMapping("/")
+	public ModelAndView home() {
+		ModelAndView mav = new ModelAndView("home");
+		String test = ts.getTest();
+		mav.addObject("test", test);
+		return mav;
+	}
+}
+----------------------------
+#)TestService.java
+package com.itbank.service;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.itbank.model.TestDAO;
+
+@Service
+public class TestService {
+	
+	@Autowired private TestDAO dao;
+
+	public String getTest() {
+//		return "서현씨 다 됐나요?";
+		return dao.selectVersion();
+	}
+
+}
+---------------------------
+#)TestDAO
+package com.itbank.model;
+
+import org.apache.ibatis.annotations.Select;
+import org.springframework.stereotype.Repository;
+
+@Repository
+public interface TestDAO {
+
+	@Select("select banner from v$version")
+	String selectVersion();
+
+	
+}
+------------------------
+#)BookController.java
+package com.itbank.controller;
+
+import java.util.HashMap;
+import java.util.List;
+
+import javax.servlet.http.HttpSession;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.ModelAndView;
+
+import com.itbank.book.BookDTO;
+import com.itbank.service.BookService;
+
+@Controller
+public class BookController {
+
+	@Autowired private BookService bs;
+	
+	@GetMapping("/bookList")
+	public String bookList() {
+		return "redirect:/bookList/idx";
+	}
+	
+	@GetMapping("/bookList/{order}")
+	public ModelAndView bookList(@RequestParam HashMap<String, String> map,
+								 @PathVariable String order) {
+		ModelAndView mav = new ModelAndView("bookList");
+		
+		map.put("order", order);
+//		System.out.println("map : " + map);
+//		HashMap을 이용하여 parameter를 받을 때는 어노테이션 @RequestParam을 생략하면 안된다
+		
+		List<BookDTO> list = bs.getList(map);
+		mav.addObject("list", list);
+		return mav;
+	}
+	
+	@GetMapping("/deleteBook/{idx}")	
+	public ModelAndView deleteBook(@PathVariable int idx) {
+		
+		ModelAndView mav = new ModelAndView("alert");
+		int row = bs.deleteBook(idx);
+
+		if(row == 1) {
+			mav.addObject("msg", idx + "번 도서정보가 삭제되었습니다");
+			mav.addObject("url", "bookList");
+		}
+		else {
+			mav.addObject("msg", "삭제가 처리되지 않았습니다");
+			// url을 지정하지 않으면 history.go(-1) 로 이전 페이지로 이동하도록
+		}
+		return mav;
+	}
+	
+	@GetMapping("/modifyBook/{idx}")
+	public ModelAndView modify(@PathVariable int idx) {
+		ModelAndView mav = new ModelAndView("modifyBook");
+		BookDTO dto = bs.select(idx);	// 객체 하나의 정보를 불러와서
+		mav.addObject("dto", dto);		// 넘겨주고, jsp에서 form 태그의 value값으로 활용한다
+		return mav;
+	}
+	
+	@PostMapping("/modifyBook/{idx}")
+	public ModelAndView modify(BookDTO dto) {	// 사용자가 수정 이후 제출한 데이터를 dto로 받는다
+		ModelAndView mav = new ModelAndView("alert");
+		System.out.println("수정 도서의 번호 : " + dto.getIdx());
+		int row = bs.modify(dto);
+		if(row == 1) {
+			mav.addObject("msg", "수정 성공 !!");
+			mav.addObject("url", "bookList");
+		}
+		else {
+			mav.addObject("msg", "수정 실패 !!");
+		}
+		return mav;
+	}
+	
+	@GetMapping("/addBook")
+	public void addBook() {
+		System.out.println("2) 컨트롤러");
+	}
+	
+	@PostMapping("/addBook")
+	public ModelAndView addBook(BookDTO dto) {
+		ModelAndView mav = new ModelAndView("alert");
+		int row = bs.insert(dto);
+		mav.addObject("msg", row == 1 ? "추가 성공" : "추가 실패");
+		mav.addObject("url", row == 1 ? "bookList" : "");
+		return mav;
+	}
+}
+------------------------
+#)LoginIntercepter.java
+package com.itbank.intercepter;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
+
+import org.springframework.web.servlet.ModelAndView;
+import org.springframework.web.servlet.handler.HandlerInterceptorAdapter;
+
+import com.itbank.member.MemberDTO;
+
+public class LoginIntercepter extends HandlerInterceptorAdapter {
+
+	// Menu - Source - Override/Implement method
+	
+	@Override
+	public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler)
+			throws Exception {
+		
+		HttpSession session = request.getSession();
+		MemberDTO login = (MemberDTO) session.getAttribute("login");
+		System.out.print("1) ");
+		System.out.println(login != null ? "로그인 사용자 : " + login.getUserid() : "로그인 없음" );
+		
+		if(login != null) {
+			return true;
+		}
+		
+		String cpath = request.getContextPath();
+		String url = request.getRequestURL().toString();
+		// 클라이언트 요청한 주소 (원래 가려고 했던 주소)
+
+		response.sendRedirect(cpath + "/login?url=" + url);
+		return false;	// 반환값에 따라서 기존 요청에 대한 처리를 그대로 진행하거나	true
+						// 혹은 진행을 중단하고 새로운 응답을 만들어서 보낸다		false
+	}
+
+	@Override
+	public void postHandle(HttpServletRequest request, HttpServletResponse response, Object handler,
+			ModelAndView modelAndView) throws Exception {
+
+	}
+
+	@Override
+	public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex)
+			throws Exception {
+
+	}
+
+	
+}
+----------------------------
+#)MemberDTO.java
+package com.itbank.member;
+
+// LOMBOK : getter/setter/contructor/toString
+public class MemberDTO {
+	
+	private String userid, userpw, username, email, gender;
+	
+	@Override
+	public String toString() {
+		return String.format("{%s, %s, %s, %s, %s}", userid, userpw, username, email, gender);
+	}
+
+	public String getUserid() {
+		return userid;
+	}
+	public void setUserid(String userid) {
+		this.userid = userid;
+	}
+	public String getUserpw() {
+		return userpw;
+	}
+	public void setUserpw(String userpw) {
+		this.userpw = userpw;
+	}
+	public String getUsername() {
+		return username;
+	}
+	public void setUsername(String username) {
+		this.username = username;
+	}
+	public String getEmail() {
+		return email;
+	}
+	public void setEmail(String email) {
+		this.email = email;
+	}
+	public String getGender() {
+		return gender;
+	}
+	public void setGender(String gender) {
+		this.gender = gender;
+	}
+}
+--------------------------
+#)MemberDAO.java
+package com.itbank.member;
+
+import java.util.List;
+
+import org.apache.ibatis.annotations.Select;
+
+public interface MemberDAO {
+
+	@Select("select * from member order by userid")
+	List<MemberDTO> selectList();
+	
+	int insert(MemberDTO dto);
+
+	MemberDTO selectMember(MemberDTO dto);
+
+	int update(MemberDTO target);
+	
+	// 어노테이션 대신 XML 설정으로 쿼리문 수행하기
+	// namespace 는 패키지.인터페이스이름
+	// id는 메서드이름
+
+	// <mapper namespace="com.itbank.member.MemberDAO">
+	//		<select id="selectMembmer" resultType="com.itbank.member.MemberDTO">
+	//			select * from member where userid = #{userid} and userpw = #{userpw}
+	//		</select>
+	// </mapper>
+	
+
+}
+----------------------------------
+
+
+
+
+
+
+
+
+
+
+
+===============================================================
 
 package myServlet;
 
@@ -6064,3 +6791,5 @@ HTTP header - referer
     웹브라우저는 웹서버로부터 받은 쿠키 데이터를 내부 메모리 또는 
     별도의 폴더에 저장합니다. 그리고 그 웹서버를 방문할 때마다 쿠키를 
     요청 헤더(Request Header)에 담아 다시 전달합니다.
+
+
