@@ -7355,6 +7355,91 @@ public class MemberService {
 		
 </beans>
 ---------------------
+//HomeController
+package com.itbank.controller;
+
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.RequestMapping;
+
+@Controller
+public class HomeController {
+	
+	@RequestMapping("/")
+	public String home() {
+		return "home";
+	}
+}
+----------------------
+//ex02.jsp
+package com.itbank.controller;
+
+import java.util.HashMap;
+
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+@Controller
+public class Ex02Controller {
+
+	@GetMapping("/ex02")
+	public void ex02() {}
+	
+	@GetMapping("/ex02Ajax")
+	@ResponseBody	// 이 함수는 jsp로 포워딩하지 않습니다. 반환값 자체가 응답입니다
+	public int ex02Ajax(@RequestParam HashMap<String, String> param) {
+		int n1 = Integer.parseInt(param.get("n1"));
+		int n2 = Integer.parseInt(param.get("n2"));
+		int answer = n1 + n2;
+		return answer;
+	}
+}
+-----------------------------
+//ex01
+package com.itbank.controller;
+
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+@Controller
+public class Ex01Controller {
+	
+	@GetMapping("/ex01")
+	public void ex01() {}
+	
+	@GetMapping("/ex01-ajax")
+	@ResponseBody		// 이 메서드는 응답의 내용을 직접 반환합니다
+	public String ex01Ajax() {
+//		return "ex01";	// ex01.jsp 를 찾아가서 실행하고 그 결과를 response로 반환한다
+		// 반환하는 문자열 자체가 응답이 되지 않는다
+		
+		return "Hello, world !!";
+	}
+
+}
+---------------------------
+//header.jsp
+<%@ page language="java" contentType="text/html; charset=UTF-8"
+    pageEncoding="UTF-8"%>
+<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
+<c:set var="cpath">${pageContext.request.contextPath }</c:set>
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Insert title here</title>
+</head>
+<body>
+
+<h1><a href="${cpath }">day11</a></h1>
+<hr>
+---------------------------------
+
+
 
 
 
