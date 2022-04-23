@@ -7438,12 +7438,173 @@ public class Ex01Controller {
 <h1><a href="${cpath }">day11</a></h1>
 <hr>
 ---------------------------------
+//home.jsp
+<%@ page language="java" contentType="text/html; charset=UTF-8"
+    pageEncoding="UTF-8"%>
+<%@ include file="header.jsp" %>
+<fieldset>
+	<h4>요청을 만들어내는 요소들</h4>
+	<ol>
+		<li>&lt;a> 태그</li>
+		<li>&lt;form> 태그</li>
+		<li>javascript:location.href = url</li>
+		<li>AJAX (XMLHttpRequest)</li>
+	</ol>
+</fieldset>
+
+<h3>AJAX 요청을 전달하는 방식에는 XMLHttpRequest, jQuery AJAX, AXIOS, fetch 등이 있다</h3>
+
+<ul>
+	<li><a href="${cpath }/ex01">ex01 - ResponseBody</a></li>
+	<li><a href="${cpath }/ex02">ex02 - fetch</a></li>
+</ul>
+
+</body>
+</html>
+-------------------------------
+//ex01
+<%@ page language="java" contentType="text/html; charset=UTF-8"
+    pageEncoding="UTF-8"%>
+<%@ include file="header.jsp" %>
+<h2>ex01 - 기본적인 XMLHttpRequest</h2>
+
+<fieldset>
+	<button id="btn">요청</button>
+	<span id="result"></span>
+</fieldset>
+
+<script>
+	function request() {
+		const xhr = new XMLHttpRequest()
+		
+		xhr.onreadystatechange = function(event) {
+			if(xhr.status == 200 && xhr.readyState == xhr.DONE) {
+				document.getElementById('result').innerText = xhr.responseText
+			}	
+		}
+		xhr.open('GET', '${cpath}/ex01-ajax')	// xhr.open(method, url)
+		xhr.send()
+	}
+	
+	const btn = document.getElementById('btn')
+	btn.onclick = request
+</script>
 
 
 
+</body>
+</html>
+------------------------------
+//ex02
+<%@ page language="java" contentType="text/html; charset=UTF-8"
+    pageEncoding="UTF-8"%>
+<%@ include file="header.jsp" %>
 
+<div>
+	<input type="number" name="n1" min="0" max="100" placeholder="n1">
+	+
+	<input type="number" name="n2" min="0" max="100" placeholder="n2">
+	<input type="button" value="=">
+	<span id="result"></span>
+</div>
 
+<script>
+	const btn = document.querySelector('input[type="button"]')
+	
+	btn.onclick = function() {	// 사용자가 버튼을 클릭하면
+		// 변수 선언
+		const n1 = document.querySelector('input[name="n1"]').value		// 값을 불러온다	
+		const n2 = document.querySelector('input[name="n2"]').value
+		
+		const url = '${cpath}/ex02Ajax?n1=' + n1 + '&n2=' + n2
+		const opt = {
+			method: 'GET'
+		}
+		
+		fetch(url, opt)				// 1) 주소와 옵션으로 요청을 보낸다
+		.then(resp => resp.text())	// 2) 응답을 텍스트 형태로 변환한다
+		.then(text => {				// 3) 텍스트 형태의 응답을 result 태그 내부에 글자로 적는다
+			document.getElementById('result').innerText = text
+		})
+	}
+	
+</script>
+
+</body>
+</html>
 =================================================================
+//day12
+//servlet-context.xml
+<?xml version="1.0" encoding="UTF-8"?>
+<beans:beans xmlns="http://www.springframework.org/schema/mvc"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:beans="http://www.springframework.org/schema/beans"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xsi:schemaLocation="http://www.springframework.org/schema/mvc https://www.springframework.org/schema/mvc/spring-mvc.xsd
+		http://www.springframework.org/schema/beans https://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/context https://www.springframework.org/schema/context/spring-context.xsd">
+
+	<!-- DispatcherServlet Context: defines this servlet's request-processing infrastructure -->
+	
+	<!-- Enables the Spring MVC @Controller programming model -->
+	<annotation-driven />
+
+	<!-- Handles HTTP GET requests for /resources/**   */by efficiently serving up static resources in the ${webappRoot}/resources directory -->
+	<resources mapping="/resources/**" location="/resources/" />
+
+	<!-- Resolves views selected for rendering by @Controllers to .jsp resources in the /WEB-INF/views directory -->
+	<beans:bean class="org.springframework.web.servlet.view.InternalResourceViewResolver">
+		<beans:property name="prefix" value="/WEB-INF/views/" />
+		<beans:property name="suffix" value=".jsp" />
+	</beans:bean>
+	
+	<context:component-scan base-package="com.itbank.controller" />
+	
+	
+	
+</beans:beans>
+--------------------------
+//root-context.xml
+
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:mybatis-spring="http://mybatis.org/schema/mybatis-spring"
+	xsi:schemaLocation="http://mybatis.org/schema/mybatis-spring http://mybatis.org/schema/mybatis-spring-1.2.xsd
+		http://www.springframework.org/schema/beans https://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.3.xsd">
+	
+	<!-- Root Context: defines shared resources visible to all other web components -->
+	<bean id="hikariConfig" class="com.zaxxer.hikari.HikariConfig">
+		<property name="driverClassName" value="oracle.jdbc.OracleDriver" />
+		<property name="jdbcUrl" value="jdbc:oracle:thin:@192.168.1.100:1521:xe" />
+		<property name="username" value="c##itbank" />
+		<property name="password" value="it" />
+	</bean>
+	
+	<bean id="dataSource" class="com.zaxxer.hikari.HikariDataSource" destroy-method="close">
+		<constructor-arg ref="hikariConfig" />
+	</bean>
+	
+	<bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+		<property name="dataSource" ref="dataSource" />
+	</bean>
+	
+	<bean id="sqlSessionTemplate" class="org.mybatis.spring.SqlSessionTemplate" destroy-method="close">
+		<constructor-arg ref="sqlSessionFactory" />
+	</bean>
+	
+	<context:component-scan base-package="com.itbank.service" />
+	<mybatis-spring:scan base-package="com.itbank.member" />
+	
+		
+</beans>
+
+----------------------------
+
+
+==================================================================
 package myServlet;
 
 import java.io.IOException;
