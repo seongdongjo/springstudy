@@ -7977,11 +7977,97 @@ function getDom(json) {	// 넘어오는 json 객체가 배열이다
 </body>
 </html>
 ----------------------------
+//ex04.jsp
+<%@ page language="java" contentType="text/html; charset=UTF-8"
+    pageEncoding="UTF-8"%>
+<%@ include file="header.jsp" %>
+<script src="${cpath }/resources/js/ex04.js"></script>
+
+<h2>member 목록으로 테이블 만들기</h2>
+
+<button id="btn">멤버 목록 불러오기</button>
+<div id="result">
+	<img src="http://221.164.9.222/img/heos.gif">
+</div>
+
+<script>
+	const cpath = '${cpath}'
+	
+	const btn = document.querySelector('#btn')
+	const result = document.querySelector('#result')
+	
+// 	window.onload = function() {	// 문서 로딩이 완료되면 호출할 함수
+	btn.onclick = function() {		// 버튼을 클릭하면 호출할 함수
+		const url = cpath + '/ajax4'
+		const opt = {
+			method: 'GET'
+		}
+		
+		fetch(url, opt)
+		.then(resp => resp.json())
+		.then(json => render(result, getDom(json)))
+	}
+</script>
 
 
+</body>
+</html>
+------------------------
+//quiz.jsp
+<%@ page language="java" contentType="text/html; charset=UTF-8"
+    pageEncoding="UTF-8"%>
+<%@ include file="header.jsp" %>
 
+<h2>이름으로 검색하여 회원 목록 찾기</h2>
 
+<form>
+	<input type="search" name="username" placeholder="검색할 이름을 입력하세요">
+	<input type="submit" value="검색">
+</form>
+<div id="result"></div>
 
+<script>
+	const result = document.querySelector('#result')
+	const form = document.querySelector('form')
+	
+	form.onsubmit = function(event) {
+		event.preventDefault()
+		const cpath = '${cpath}'
+		const search = document.querySelector('input[name="username"]')
+		
+		const url = cpath + '/ajaxQuiz?username=' + search.value
+		const opt = {
+			method: 'GET'
+		}
+		
+		fetch(url, opt)
+		.then(resp => resp.json())
+		.then(json => {
+			// 회원 목록이므로, 길이가 1이라도 형태는 배열로 들어올거다
+			let tag = '<table border="1" cellpadding="10" cellspacing="0">'
+			tag += '<tr>'
+			for(key in json[0]) {
+				tag += '<th>' + key + '</th>'
+			}
+			tag += '</tr>'
+			
+			json.forEach(dto => {
+				tag += '<tr>'
+				for(key in dto) {
+					const value = dto[key]
+					tag += '<td>' + value + '</td>'
+				}	
+				tag += '</tr>'
+			})
+			tag += '</table>'
+			result.innerHTML = tag
+		})
+	}
+	
+</script>
+
+</body>
+</html>
 ==================================================================
 package myServlet;
 
