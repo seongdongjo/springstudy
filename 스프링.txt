@@ -7829,6 +7829,155 @@ function getDom(json) {	// 넘어오는 json 객체가 배열이다
 <h1><a href="${cpath }">ajax fetch</a></h1>
 <hr>
 ----------------------------
+//home.jsp
+<%@ page language="java" contentType="text/html; charset=UTF-8"
+    pageEncoding="UTF-8"%>
+<%@ include file="header.jsp" %>
+
+<ul>
+	<li><a href="${cpath }/ex01">ex01 - 기본 GET 요청</a></li>
+	<li><a href="${cpath }/ex02">ex02 - GET, 파라미터 전달</a></li>
+	<li><a href="${cpath }/ex03">ex03 - GET, userid를 이용한 객체 불러오기</a></li>
+	<li><a href="${cpath }/ex04">ex04 - GET, 전체 목록을 AJAX로 불러오기</a></li>
+	<li><a href="${cpath }/quiz">quiz - GET, 사용자 이름으로 검색하여 목록을 불러오기</a></li>
+</ul>
+
+
+</body>
+</html>
+-------------------------------
+//ex01.jsp
+<%@ page language="java" contentType="text/html; charset=UTF-8"
+    pageEncoding="UTF-8"%>
+<%@ include file="header.jsp" %>
+<script>
+	function ajaxHandler(event) {
+		const url = cpath + '/ajax1'
+		const opt = {
+			method: 'GET'
+		}
+		fetch(url, opt)					// 요청을 전달하고, 응답을 받는다	
+		.then(resp => resp.text())		// 응답을 원하는 형태로 변환한다
+		.then(text => result.innerText = text)	// 변환된 데이터를 문서에 반영한다
+	}
+</script>
+<h2>기본 GET 요청</h2>
+
+<button id="btn">요청</button>
+<div id="result"></div>
+
+<script>
+	const cpath = '${cpath}'
+	const btn = document.querySelector('#btn')
+	const result = document.querySelector('#result')
+	
+	btn.onclick = ajaxHandler
+	
+</script>
+
+</body>
+</html>
+--------------------------------
+//ex02.jsp
+<%@ page language="java" contentType="text/html; charset=UTF-8"
+    pageEncoding="UTF-8"%>
+<%@ include file="header.jsp" %>
+
+<h2>GET 파라미터 전달 요청</h2>
+<input name="ch" placeholder="알파벳 한글자를 입력하세요">
+<button id="btn">요청</button>
+<div id="result"></div>
+
+<script>
+	const btn = document.querySelector('#btn')
+	const cpath = '${cpath}'
+	
+	btn.onclick = function() {
+		const ch = document.querySelector('input[name="ch"]')
+		if(ch.value == '') {
+			alert('값을 입력해야 합니다')
+			ch.focus()		// 커서만 지정된 element로 옮겨주는 함수
+			return
+		}
+		if(ch.value.length > 1) {
+			alert('한 글자만 입력해야 합니다')
+			ch.select()		// 커서를 옮기면서 값을 모두 선택한 상태로 만들어주는 함수
+			return
+		}
+		
+		const url = cpath + '/ajax2?ch=' + ch.value
+		const opt = {
+			method: 'GET'
+		}
+		fetch(url, opt)
+		.then(resp => resp.text())
+		.then(text => {
+			const result = document.querySelector('#result')
+			result.innerText = ch.value + '의 Code : ' + text
+		})
+	}
+</script>
+
+</body>
+</html>
+------------------------------------
+//ex03.jsp
+<%@ page language="java" contentType="text/html; charset=UTF-8"
+    pageEncoding="UTF-8"%>
+<%@ include file="header.jsp" %>
+
+<h2>member 검색 (id로 검색)</h2>
+
+<form>
+	<input type="text" name="userid" placeholder="검색할 ID 입력">
+	<input type="submit" value="검색">
+</form>
+<div id="result"></div>
+
+<script>
+	const form = document.forms[0]
+	const result = document.querySelector('#result')
+	const cpath = '${cpath}'
+	
+	form.onsubmit = function(event) {
+		event.preventDefault()
+		const userid = event.target.querySelector('input[name="userid"]')
+		
+		const url = cpath + '/ajax3?userid=' + userid.value
+		const opt = {
+			method: 'GET'
+		}
+		
+		fetch(url, opt)			// 주소와 옵션으로 요청을 서버에게 보내면
+		.then(function(resp) {	// 응답이 돌아온다
+// 			console.log(resp)	// 응답 객체를 자바스크립트 콘솔창에 출력
+// 			return resp.text()	// 응답 데이터를 단순 텍스트로 처리하겠다
+			return resp.json()	// 응답 데이터는 JSON형식의 문자열이므로 객체로 변환하여 처리하겠다
+		})
+		.then(function(json) {
+			console.log(json)
+			if(json == null) {
+				result.innerHTML = '<h3>검색 결과가 없습니다</h3>'
+				return
+			}
+			const ul = document.createElement('ul')
+			for(key in json) {
+				const value = json[key]
+				const li = document.createElement('li')
+				li.innerText = key + ' : ' + value
+				ul.appendChild(li)
+			}
+			result.innerHTML = ''
+			result.appendChild(ul)
+		})
+	}
+	
+</script>
+
+</body>
+</html>
+----------------------------
+
 
 
 
