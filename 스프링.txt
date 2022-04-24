@@ -7718,9 +7718,117 @@ public class MemberService {
 	}
 }
 --------------------------
+//MemberDTO
+package com.itbank.member;
 
+// LOMBOK : getter/setter/contructor/toString
+public class MemberDTO {
+	
+	private String userid, userpw, username, email, gender;
+	
+	public String getUserid() {
+		return userid;
+	}
+	public void setUserid(String userid) {
+		this.userid = userid;
+	}
+	public String getUserpw() {
+		return userpw;
+	}
+	public void setUserpw(String userpw) {
+		this.userpw = userpw;
+	}
+	public String getUsername() {
+		return username;
+	}
+	public void setUsername(String username) {
+		this.username = username;
+	}
+	public String getEmail() {
+		return email;
+	}
+	public void setEmail(String email) {
+		this.email = email;
+	}
+	public String getGender() {
+		return gender;
+	}
+	public void setGender(String gender) {
+		this.gender = gender;
+	}
+	
+	
 
+}
+-----------------------
+//MemberDAO
+package com.itbank.member;
 
+import java.util.List;
+
+import org.apache.ibatis.annotations.Select;
+import org.springframework.stereotype.Repository;
+
+@Repository
+public interface MemberDAO {
+
+	@Select("select * from member where userid = #{userid}")
+	MemberDTO selectMember(String userid);
+
+	@Select("select * from member order by userid")
+	List<MemberDTO> selectMemberList();
+
+	@Select("select * from member where username like '%${username}%' order by username")
+	List<MemberDTO> selectMemberListByUsername(String username);
+
+}
+---------------------------
+//ex04.js
+function render(target, dom) {
+	console.log('render 호출 !!')
+	target.innerHTML = dom
+}
+
+function getDom(json) {	// 넘어오는 json 객체가 배열이다
+	console.log('getDom 호출 !!')
+	console.log(json)
+	
+	let tag = `<table border="1" cellpadding="7" cellspacing="0">`
+		
+	tag += `<tr>`
+	for(key in json[0]) {		// 컬럼 이름 첫줄만 작성하기
+		tag += `<th>${key}</th>`
+	}
+	tag += `</tr>`
+	
+	json.forEach(dto => {		// value 를 작성하기
+		tag += `<tr>`
+		for(key in dto) {
+			const value = dto[key]
+			tag += `<td>${value}</td>`
+		}
+		tag += `</tr>`
+	})
+	tag += `</table>`
+//	console.log(tag)
+	return tag
+}
+----------------------------
+//header.jsp
+<%@ page language="java" contentType="text/html; charset=UTF-8"
+    pageEncoding="UTF-8"%>
+<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<c:set var="cpath">${pageContext.request.contextPath }</c:set>
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Insert title here</title>
+</head>
+<body>
+<h1><a href="${cpath }">ajax fetch</a></h1>
+<hr>
+----------------------------
 
 
 
