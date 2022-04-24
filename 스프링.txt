@@ -7602,6 +7602,127 @@ public class Ex01Controller {
 </beans>
 
 ----------------------------
+//HomeController
+package com.itbank.controller;
+
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+
+@Controller
+public class HomeController {
+
+	@RequestMapping("/")
+	public String home() {
+		return "home";
+	}
+	
+	@GetMapping("/ex01")
+	public void ex01() {}
+	
+	@GetMapping("/ex02")
+	public void ex02() {}
+	
+	@GetMapping("/ex03")
+	public void ex03() {}
+	
+	@GetMapping("/ex04")
+	public void ex04() {}
+	
+	@GetMapping("/quiz")
+	public void quiz() {}
+}
+
+-----------------------
+//AjaxController
+package com.itbank.controller;
+
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.itbank.member.MemberDTO;
+import com.itbank.service.MemberService;
+
+@Controller
+public class AjaxController {
+	
+	@Autowired private MemberService ms;
+
+	@GetMapping("/ajax1")
+	@ResponseBody			// 반환하는 데이터 그대로 응답으로 보내주기
+	public String ajax1() {
+		return "Hello, world !!";
+	}
+	
+	@GetMapping("/ajax2")
+	@ResponseBody
+	public int ajax2(String ch) {
+		int code = (int)ch.charAt(0);
+		return code;
+	}
+	
+	@GetMapping(value="/ajax3", produces="application/json; charset=utf-8")
+	@ResponseBody
+	public String ajax3(String userid) throws JsonProcessingException {
+		MemberDTO dto = ms.getMember(userid);
+		ObjectMapper om = new ObjectMapper();		// 자바 <-> 자바스크립트 객체 변환기
+		String json = om.writeValueAsString(dto);	// 객체의 값을 문자열형식으로
+		return json;
+	}
+	
+	@GetMapping("/ajax4")
+	@ResponseBody
+	public List<MemberDTO> ajax4() {
+		return ms.getMemberList();
+	}
+	
+	@GetMapping("/ajaxQuiz")
+	@ResponseBody
+	public List<MemberDTO> ajaxQuiz(String username) {
+		return ms.getMemberList(username);
+	}
+}
+---------------------
+//MemberService
+package com.itbank.service;
+
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.itbank.member.MemberDAO;
+import com.itbank.member.MemberDTO;
+
+@Service
+public class MemberService {
+
+	@Autowired private MemberDAO dao;
+
+	public MemberDTO getMember(String userid) {
+		return dao.selectMember(userid);
+	}
+
+	public List<MemberDTO> getMemberList() {
+		return dao.selectMemberList();
+	}
+
+	public List<MemberDTO> getMemberList(String username) {
+		return dao.selectMemberListByUsername(username);
+	}
+}
+--------------------------
+
+
+
+
+
 
 
 ==================================================================
