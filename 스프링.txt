@@ -8135,6 +8135,71 @@ function getDom(json) {	// 넘어오는 json 객체가 배열이다
 		
 </beans>
 ------------------------
+//HomeController.java
+package com.itbank.controller;
+
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+
+@Controller
+public class HomeController {
+
+	@RequestMapping("/")
+	public String home() {
+		return "home";
+	}
+	
+	@GetMapping("/ex01")
+	public void ex01() {}
+	
+
+}
+-----------------------
+//AjaxController.java
+package com.itbank.controller;
+
+import java.util.HashMap;
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.itbank.service.BoardService;
+
+@RestController
+public class AjaxController {
+	
+	@Autowired private BoardService bs;
+	
+	@GetMapping("/getBoardData/{offset}")
+	public List<HashMap<String, Object>> getBoardData(@PathVariable int offset) {
+		return bs.getBoardData(offset);
+	}
+}
+--------------------------
+//BoardDAO.java
+package com.itbank.board;
+
+import java.util.HashMap;
+import java.util.List;
+
+import org.apache.ibatis.annotations.Select;
+import org.springframework.stereotype.Repository;
+
+@Repository
+public interface BoardDAO {
+
+	@Select("select writer, content, to_char(writeDate,'yyyy-MM-dd') as writeDate from board2" + 
+			"    order by idx desc" + 
+			"    OFFSET #{offset} ROWS " + 
+			"    FETCH NEXT 5 ROWS ONLY")
+	List<HashMap<String, Object>> selectBoardData(int offset);
+
+}
+---------------------------
 
 
 
