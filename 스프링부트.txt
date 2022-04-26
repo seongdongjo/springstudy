@@ -140,6 +140,9 @@ class BMW2{
 	}
 }
 
+
+
+
 //올바른 예(확장이 쉽게)
 package book.oopforsprings.lec05.solid;
 
@@ -154,7 +157,7 @@ public class OCP운전자_OK {
 		운전자[2] = new BMW();
 		
 		for(int i=0; i<운전자.length; i++) {
-			운전자[i].drive();
+			운전자[i].drive(); //소나타,그랜저,bmw 찾아간다. 각각 new했으니까
 		}
 
 	}
@@ -170,7 +173,7 @@ class 자동차{
 
 class 소나타 extends 자동차{
 	public 소나타() {
-		myCar = "소나타";
+		myCar = "소나타"; //덮어쓰기
 	}	
 }
 
@@ -342,7 +345,7 @@ public class HairDryer implements Electronic110V{
 ---------------
 package com.company.adapter;
 
-public class SocketAdapter implements Electronic110V{ //110을 220으로 변환하는 어댑터
+public class SocketAdapter implements Electronic110V{ //110을 implements한것은 poweron을 오버라이딩해야한다는것이다.
 
     private Electronic220V electronic220V;
 
@@ -4207,7 +4210,234 @@ public class GlobalControllerAdvice {
         }
 }
 ======================================================================
+//User.java
+package com.example.exception.dto;
 
+import javax.validation.constraints.Min;
+import javax.validation.constraints.NotEmpty;
+import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Size;
+
+public class User {
+
+    @NotEmpty
+    @Size(min = 1, max = 10)
+    private String name;
+
+    @Min(1)
+    @NotNull
+    private Integer age;
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public int getAge() {
+        return age;
+    }
+
+    public void setAge(int age) {
+        this.age = age;
+    }
+
+    @Override
+    public String toString() {
+        return "User{" +
+                "name='" + name + '\'' +
+                ", age=" + age +
+                '}';
+    }
+}
+-----------------------
+//ApiController.java
+package com.example.exception.controller;
+
+import com.example.exception.dto.User;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.*;
+
+import javax.validation.Valid;
+import javax.validation.constraints.Min;
+import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Size;
+
+@RestController
+@RequestMapping("/api/user")
+@Validated //이거를 통해 @RequestParam이 검증을할수있다.
+public class ApiController {
+    @GetMapping("")
+    public User get(
+            @Size(min = 2) //필수로 받기위해
+            @RequestParam String name, 
+
+            @NotNull
+            @Min(1) //태어날떄부터 1살이니까
+            @RequestParam Integer age) { //Integer로 한이유는 @NotNull하기위해 (userclass 변수에)
+            User user = new User();
+            user.setAge(age); //age를 입력받지 않으면 null pointer에러가난다. set은 int를 받아야되는데 null을 받았기떄문에
+            //null pointer 뜨는것을 방지하기 위해 @Validated
+            user.setName(name);
+
+        return user;
+    }
+
+    @PostMapping("")
+    public User post(@Valid @RequestBody User user) { //@RequestBody는 알아서 User 에 setter해준다.
+        System.out.println(user); //빈값을 보내면 서버에서는 에러가 default message [크기가 1에서 10 사이여야 합니다]] ] 이런식으로 에러가뜬다.
+        //근데 클라이언트 입장에서는 아래처럼 400에러 라고 뜨면서 불친절하다. 그래서 직접만들자. -> 내가만든 GlobalControllerAdvice class참조
+//        {
+//            "timestamp": "2022-04-10T12:26:45.517+00:00",
+//                "status": 400,
+//                "error": "Bad Request",
+//                "path": "/api/user"
+//        }
+        return user;
+    }
+
+    //GlobalControllerAdvice에서 예외 설정은 했지만 우선순위는 컨트롤러에서 지정한 ExceptionHandler를 먼저 탄다.
+        @ExceptionHandler(value = MethodArgumentNotValidException.class)
+        public ResponseEntity methodArgumentNotValidException(MethodArgumentNotValidException e) {
+            //기존에 뜨던 방식
+            //        {
+//            "timestamp": "2022-04-10T12:26:45.517+00:00",
+//                "status": 400,
+//                "error": "Bad Request",
+//                "path": "/api/user"
+//        }
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage()); //불친절한 메시지가 응답으로 간다. (그래도 어디서 예외났는지는 알수있다)
+        }
+}
+-------------------------
+package com.example.exception.advice;
+
+import com.example.exception.controller.ApiController;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.validation.BindingResult;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+import javax.validation.ConstraintViolationException;
+import javax.validation.Path;
+import java.lang.reflect.Field;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
+
+@RestControllerAdvice(basePackageClasses = ApiController.class) //ApiController에서만 작동하는
+public class ApiControllerAdvice {
+
+    @ExceptionHandler(value = Exception.class) //이 프로젝트에서 일어나는 모든 예외를 잡을거다, 클라이언트의 잘못이 아니라 서버의 잘못. 아래는 클라이언트의 잘못(입력의문제)
+    public ResponseEntity exception(Exception e) {
+        System.out.println(e.getClass().getName());
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("");
+    }
+
+    @ExceptionHandler(value = MethodArgumentNotValidException.class) //name : "", "age" : 0으로 보내면
+        public ResponseEntity methodArgumentNotValidException(MethodArgumentNotValidException e) {
+        //기존에 뜨던 방식
+        //        {
+//            "timestamp": "2022-04-10T12:26:45.517+00:00",
+//                "status": 400,
+//                "error": "Bad Request",
+//                "path": "/api/user"
+//        }
+        BindingResult bindingResult = e.getBindingResult();
+        bindingResult.getAllErrors().forEach(error-> {
+            FieldError field = (FieldError) error;
+            String fieldName = field.getField();
+            String message = field.getDefaultMessage();
+            String value = field.getRejectedValue().toString();
+
+            System.out.println(fieldName);
+            System.out.println(message);
+            System.out.println(value);
+
+            //이렇게 전송 시
+//                    {
+//                        "name" : "",
+//                        "age" : 0
+//                    }
+            
+            //콘솔에 출력
+            //name   -> fieldName
+            //비어있을수 없습니다.   -> message
+            //       -> value
+
+            //age    -> fieldName
+            //1이상이어야한다.   ->message
+            //0         -> value
+
+            //name       ->fieldName
+            //크키가 1에서 10사이여합니다. -> message
+
+        });
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage()); //불친절한 메시지가 응답으로 간다. (그래도 어디서 예외났는지는 알수있다)
+    }
+
+    //GET으로 name,age에 아무것도 안보내면 MissingServletRequestParameterException 라는 에러가 뜬다.
+    //또 GET으로 name = a, age = 0으로 보내면 @validated에서 검사 후 에러 -> ConstraintViolationException
+
+    @ExceptionHandler(value = ConstraintViolationException.class)
+    public ResponseEntity ConstraintViolationException(ConstraintViolationException e) {
+
+        e.getConstraintViolations().forEach(error-> {
+
+            Stream<Path.Node> stream = StreamSupport.stream(error.getPropertyPath().spliterator(),false);
+            List<Path.Node> list = stream.collect(Collectors.toList());
+
+            //name = "", age = 0으로 보내면 -->
+            //age
+            //1이상이어야 합니다
+            //0
+
+            //name
+            //크키가 2에서 2147~ 사이여야 합니다.
+            String field = list.get(list.size()-1).getName();
+            String message = error.getMessage();
+            String invalidValue = error.getInvalidValue().toString();
+
+            System.out.println(field);
+            System.out.println(message);
+            System.out.println(invalidValue);
+        });
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+    }
+    //어디 핸들러를 타는지는 디버그를 통해 출력해보는게 좋다.(return쪽에)
+    //빈값으로 보내면
+
+    //age  -> fieldName
+    //Integer  -> fieldType
+    //Required Integer parameter "age" is not present   -> invalidValue
+    @ExceptionHandler(value= MissingServletRequestParameterException.class)
+    public ResponseEntity missingServletRequestParameterException(MissingServletRequestParameterException e) {
+
+        String fieldName = e.getParameterName();
+        String fieldType = e.getParameterType();
+        String invalidValue = e.getMessage();
+
+        System.out.println(fieldName);
+        System.out.println(fieldType);
+        System.out.println(invalidValue);
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+    }
+
+
+
+}
+==========================================================================================
  
 
 
